@@ -33,7 +33,7 @@ import MapCard from './MapCard';
 const MapDisplay = (props) => {
   const resources = {
     algorithmChoices : new URL('algorithms/', props.apiUrls.mapsRoot),
-    descriptors: new URL('descriptors/', props.apiUrls.mapsRoot),
+    embeddings: new URL('embeddings/', props.apiUrls.mapsRoot),
   };
   const definitions = {
     Map: {

@@ -20,12 +20,11 @@ export default function QSARModelCreateCard (props) {
 
   const trainingStrategyInit = {
     activityThreshold : 6.5,
-    descriptors: [props.descriptors[0].id],
+    embeddings: props.embeddings && props.embeddings.length > 0 ? [{ id: props.embeddings[0].id, params: {} }] : [{ id: 1, params: {} }],
   };
-  const validationStrategyInit = {
-    cvFolds: 10,
-    validSetSize: 0.2,
-  };
+  const validationStrategyInit = [{
+    cvFolds: 3,
+  }];
   const extraParamInit = {
     molset: molset ? molset.id : undefined,
     predictionsType: endpointData ? endpointData.type.value : undefined,
@@ -34,12 +33,19 @@ export default function QSARModelCreateCard (props) {
 
   const trainingStrategySchema = {
     activityThreshold: Yup.number().min(0, 'Activity threshold must be zero or positive.').required('Activity threshold is a required parameter.'),
-    descriptors: Yup.array().of(Yup.number().positive('Descriptor set ID must be a positive integer.')).required('You need to supply one or more descriptor sets for training.'),
+    embeddings: Yup.array().of(
+      Yup.object().shape({
+        id: Yup.number().positive('Descriptor set ID must be a positive integer.').required('Descriptor set ID is required.'),
+        params: Yup.object()
+      })
+    ).min(1, 'You need to supply at least one descriptor set for training.').required('You need to supply one or more descriptor sets for training.'),
   };
-  const validationStrategySchema = {
-    cvFolds: Yup.number().integer().min(0, 'Number of CV folds must be at least 0.'),
-    validSetSize: Yup.number().min(0.0, 'Validation set size must be at least 0.0.').max(1.0,'Validation set size is expressed as a fraction, which needs to be less than 1.0.'),
-  };
+  const validationStrategySchema = Yup.array().of(
+    Yup.object().shape({
+      cvFolds: Yup.number().integer().min(0, 'Number of CV folds must be at least 0.'),
+      validSetSize: Yup.number().min(0.0, 'Validation set size must be at least 0.0.').max(1.0,'Validation set size is expressed as a fraction, which needs to be less than 1.0.'),
+    })
+  );
 
   const extraParamsSchema = {
     molset: Yup.number().integer().positive('Molecule set ID must be a positive integer.').required('You need to supply a training set of compounds.'),

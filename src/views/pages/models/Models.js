@@ -11,8 +11,9 @@ import QSARModelCreateFromFileCard from './QSARModelCreateFromFileCard';
 function Models(props) {
   const resources = {
     algorithmChoices : new URL('algorithms/', props.apiUrls.qsarRoot),
-    descriptors: new URL('descriptors/', props.apiUrls.qsarRoot),
-    metrics: new URL('metrics/', props.apiUrls.qsarRoot)
+    embeddings: new URL('embeddings/list/', props.apiUrls.qsarRoot),
+    metrics: new URL('metrics/', props.apiUrls.qsarRoot),
+    dataSplits: new URL('data-splits/list/', props.apiUrls.qsarRoot),
   };
   const definitions = {
     QSARModel: {

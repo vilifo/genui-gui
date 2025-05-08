@@ -1,11 +1,41 @@
 import React from "react";
 import { FormikModelUploadForm, ModelCardNew } from '../../../genui';
 import * as Yup from 'yup';
-import { DescriptorsField, PredictionsFields } from './QSARModelFormFields';
+import { EmbeddingsField, PredictionsFields } from './QSARModelFormFields';
 
 export default function QSARModelCreateFromFileCard (props) {
+  const [embeddings, setEmbeddings] = React.useState([]);
+  const [, setLoading] = React.useState(true);
+
+  // Fetch embeddings when component mounts
+  React.useEffect(() => {
+    const fetchEmbeddings = async () => {
+      setLoading(true);
+      try {
+        const url = new URL('embeddings/', props.apiUrls.qsarRoot);
+        const response = await fetch(url.toString(), {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch embeddings: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log("Fetched embeddings:", data);
+        setEmbeddings(data);
+      } catch (error) {
+        console.error("Error fetching embeddings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmbeddings();
+  }, [props.apiUrls.qsarRoot]);
+
   const trainingStrategyInit = {
-    descriptors: [props.descriptors[0].id],
+    embeddings: embeddings.length > 0 ? [{ id: embeddings[0].id, params: {} }] : [{ id: 1, params: {} }],
   };
 
   const extraParamsInit = {
@@ -14,7 +44,7 @@ export default function QSARModelCreateFromFileCard (props) {
   };
 
   const trainingStrategySchema = {
-    descriptors: Yup.array().of(Yup.number().positive('Descriptor set ID must be a positive integer.')).required('You need to supply one or more descriptor sets for training.'),
+    embeddings: Yup.array().of(Yup.number().positive('Descriptor set ID must be a positive integer.')).required('You need to supply one or more descriptor sets for training.'),
   };
 
   const extraParamsSchema = {
@@ -35,7 +65,7 @@ export default function QSARModelCreateFromFileCard (props) {
       trainingStrategyInit={trainingStrategyInit}
       trainingStrategySchema={trainingStrategySchema}
       trainingStrategyFields={(props) => (
-        <DescriptorsField
+        <EmbeddingsField
           {...props}
           description="Check the descriptor sets that were used to train this model."
         />

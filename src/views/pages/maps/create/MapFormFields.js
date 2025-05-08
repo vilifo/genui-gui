@@ -9,13 +9,13 @@ export function MapTrainFields(props) {
   return (
     <React.Fragment>
       <FormGroup>
-        <Label htmlFor={`${trainingStrategyPrefix}.descriptors`}>Descriptor Sets</Label>
+        <Label htmlFor={`${trainingStrategyPrefix}.embeddings`}>Descriptor Sets</Label>
         <p>
           Choose one or more descriptor sets to use in the calculations.
         </p>
-        <Field name={`${trainingStrategyPrefix}.descriptors`} as={Input} type="select" multiple>
+        <Field name={`${trainingStrategyPrefix}.embeddings`} as={Input} type="select" multiple>
           {
-            props.descriptors.map((desc) => (
+            props.embeddings.map((desc) => (
               <option key={desc.id} value={desc.id}>
                 {desc.name}
               </option>
@@ -23,7 +23,7 @@ export function MapTrainFields(props) {
           }
         </Field>
       </FormGroup>
-      <FieldErrorMessage name={`${trainingStrategyPrefix}.descriptors`}/>
+      <FieldErrorMessage name={`${trainingStrategyPrefix}.embeddings`}/>
     </React.Fragment>
   )
 }

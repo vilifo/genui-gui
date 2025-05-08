@@ -78,10 +78,29 @@ class ModelFormRenderer extends React.Component {
       mode: this.state.modes.length > 0 ? this.state.modes[0].id : [],
     };
     const trainingStrategyInit = Object.assign(trainingStrategyDefaultInit, this.props.trainingStrategyInit ? this.props.trainingStrategyInit : {});
-    const validationStrategyDefaultInit = this.state.metrics && !this.disabledModelFormFields.includes('validationStrategy.metrics') ? {
-      metrics: this.state.metrics.length > 0 ? [this.state.metrics[0].id] : []
-    } : {};
-    const validationStrategyInit = Object.assign(validationStrategyDefaultInit, this.props.validationStrategyInit ? this.props.validationStrategyInit : {});
+    // Handle validation strategy initialization
+    let validationStrategyInit;
+
+    // Check if validationStrategyInit is provided as an array
+    if (this.props.validationStrategyInit && Array.isArray(this.props.validationStrategyInit)) {
+      // If it's an array, map over each item and merge with default metrics if needed
+      validationStrategyInit = this.props.validationStrategyInit.map(strategy => {
+        const defaultInit = this.state.metrics && !this.disabledModelFormFields.includes('validationStrategy.metrics') ? {
+          metrics: this.state.metrics.length > 0 ? [this.state.metrics[0].id] : []
+        } : {};
+        return Object.assign({}, defaultInit, strategy);
+      });
+    } else {
+      // If it's not an array, create a single strategy object
+      const validationStrategyDefaultInit = this.state.metrics && !this.disabledModelFormFields.includes('validationStrategy.metrics') ? {
+        metrics: this.state.metrics.length > 0 ? [this.state.metrics[0].id] : []
+      } : {};
+      validationStrategyInit = Object.assign({}, validationStrategyDefaultInit, this.props.validationStrategyInit ? this.props.validationStrategyInit : {});
+      // Convert to array if it's not empty
+      if (Object.keys(validationStrategyInit).length !== 0) {
+        validationStrategyInit = [validationStrategyInit];
+      }
+    }
 
     let initialValues = {
       name: `New ${this.chosenAlgorithm.name} Model`,
@@ -94,7 +113,7 @@ class ModelFormRenderer extends React.Component {
     }
 
     // validation
-    if (Object.keys(validationStrategyInit).length !== 0 && validationStrategyInit.constructor === Object) {
+    if (validationStrategyInit && validationStrategyInit.length > 0) {
       initialValues.validationStrategy = validationStrategyInit;
     }
 
@@ -153,14 +172,24 @@ class ModelFormRenderer extends React.Component {
     }
 
     // validation added only if there is something to add
-    const validationStrategyDefault = this.state.metrics && !this.disabledModelFormFields.includes('validationStrategy.metrics') ? {
-      metrics: Yup.array().of(Yup.number().positive('Metric ID must be a positive integer.')).required('You need to supply at least one metric for validation.'),
-    } : {};
-    const validationStrategy = Object.assign(validationStrategyDefault, this.props.validationStrategySchema);
-    if (Object.keys(validationStrategy).length !== 0 && validationStrategy.constructor === Object) {
-      validationObj.validationStrategy = Yup.object().shape(
-        validationStrategy
-      );
+    // Check if validationStrategySchema is already an array validator
+    if (this.props.validationStrategySchema && this.props.validationStrategySchema._subType === 'array') {
+      // If it's already an array validator, use it directly
+      validationObj.validationStrategy = this.props.validationStrategySchema;
+    } else {
+      // Otherwise, create a validation schema for a single strategy and wrap it in an array
+      const validationStrategyDefault = this.state.metrics && !this.disabledModelFormFields.includes('validationStrategy.metrics') ? {
+        metrics: Yup.array().of(Yup.number().positive('Metric ID must be a positive integer.')).required('You need to supply at least one metric for validation.'),
+      } : {};
+
+      const validationStrategy = Object.assign({}, validationStrategyDefault, this.props.validationStrategySchema || {});
+
+      if (Object.keys(validationStrategy).length !== 0) {
+        // Create an array validator for validation strategies
+        validationObj.validationStrategy = Yup.array().of(
+          Yup.object().shape(validationStrategy)
+        ).min(1, 'At least one validation strategy is required');
+      }
     }
 
     // extra parameters

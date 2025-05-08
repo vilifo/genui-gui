@@ -10,7 +10,7 @@ export default function MapCreateCard(props) {
   );
 
   const trainingStrategyInit = {
-    descriptors: [props.descriptors[0].id],
+    embeddings: [props.embeddings[0].id],
   };
   const extraParamInit = {
     molsets: [molsets[0].id],
@@ -18,7 +18,7 @@ export default function MapCreateCard(props) {
 
   const trainingStrategySchema = {
     activityThreshold: Yup.number().min(0, 'Activity threshold must be zero or positive.'),
-    descriptors: Yup.array().of(Yup.number().positive('Descriptor set ID must be a positive integer.')).required('You need to supply one or more descriptor sets for training.'),
+    embeddings: Yup.array().of(Yup.number().positive('Descriptor set ID must be a positive integer.')).required('You need to supply one or more descriptor sets for training.'),
   };
 
   const extraParamsSchema = {

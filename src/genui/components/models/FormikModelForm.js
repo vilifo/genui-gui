@@ -21,7 +21,6 @@ function FormikModelForm (props) {
   const trainingStrategyPrefix = "trainingStrategy";
   const modes = props.modes;
   const parameters = props.parameters;
-  const metrics = props.metrics;
 
   const TrainingStrategyExtras = props.trainingStrategyFields;
   const ValidationStrategyExtras = props.validationStrategyFields;
@@ -135,31 +134,11 @@ function FormikModelForm (props) {
                 }
 
                 {
-                  !disabled.includes(`${validationStrategyPrefix}.metrics`) ? (
-                    <React.Fragment>
-                      <FormGroup row>
-                        <Label htmlFor={`${validationStrategyPrefix}.metrics`} sm={4}>Validation Metrics</Label>
-                        <Col sm={8}>
-                          <Field name={`${validationStrategyPrefix}.metrics`} as={Input} type="select" multiple>
-                            {
-                              metrics.map(metric => (
-                                <option key={metric.id} value={metric.id}>
-                                  {metric.name}
-                                </option>
-                              ))
-                            }
-                          </Field>
-                        </Col>
-                      </FormGroup>
-                      <FieldErrorMessage name={`${validationStrategyPrefix}.metrics`}/>
-                    </React.Fragment>
-                  ) : null
-                }
-
-                {
                   ValidationStrategyExtras ?
                   <ValidationStrategyExtras
+                    {...props}
                     validationStrategyPrefix={validationStrategyPrefix}
+                    formikProps={formik}
                   /> : null
                 }
               </React.Fragment>

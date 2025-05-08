@@ -12,7 +12,7 @@ export default function MapCard(props) {
     },
     {
       name : "Descriptor Sets",
-      value : trainingStrategy.descriptors.map((desc) => `${desc.name}`).join(";")
+      value : trainingStrategy.embeddings.map((desc) => `${desc.name}`).join(";")
     }
   ];
 
