@@ -170,7 +170,7 @@ export function EmbeddingsField(props) {
     };
 
     const renderParamInput = (paramName, paramValue) => {
-        if (typeof paramValue === "object") {
+        if (paramValue && typeof paramValue === "object") {
             return (
                 <div className="mt-2">
                     {Object.entries(paramValue).map(([key, value]) => (
@@ -229,7 +229,6 @@ export function EmbeddingsField(props) {
                         onChange={handleEmbeddingChange}
                         disabled={loadingEmbeddings}
                     >
-                        <option value="">Select an embedding</option>
                         {loadingEmbeddings ? (
                             <option value="" disabled>Loading embeddings...</option>
                         ) : (
@@ -273,7 +272,7 @@ export function EmbeddingsField(props) {
                         <div
                             className="p-3 border rounded"
                             style={{
-                                     backgroundColor: `hsl(${Math.random() * 360}, 25%, 95%)`
+                                backgroundColor: `hsl(${index * 137.5}, 70%, 85%)`
                             }}
                         >
                             <div className="d-flex justify-content-between align-items-center mb-3">
