@@ -5,14 +5,12 @@ import {FieldErrorMessage} from '../genui';
 
 export function EmbeddingsField(props) {
     const embeddingPrefix = props.embeddingPrefix;
-    console.log(embeddingPrefix);
     const currentIndex = embeddingPrefix ? parseInt(embeddingPrefix.split('[')[1].split(']')[0]) : null;
     const [loading, setLoading] = React.useState(false);
     const [embeddings, setEmbeddings] = React.useState([]);
     const [loadingEmbeddings, setLoadingEmbeddings] = React.useState(false);
     const {values, setFieldValue} = props.formikProps || {};
     const fetchedRef = React.useRef({});
-    console.log(values);
 
     const addEmbedding = () => {
         if (values && setFieldValue) {
@@ -34,7 +32,6 @@ export function EmbeddingsField(props) {
 
     // Fetch available embeddings when component mounts
     const fetchEmbeddings = React.useCallback(async () => {
-        console.log("Fetching embeddings...");
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
             console.error("API URLs not provided");
             return;
@@ -62,16 +59,13 @@ export function EmbeddingsField(props) {
 
     // Fetch embedding arguments when an embedding is selected and set their values
     const fetchEmbeddingArguments = React.useCallback(async (emb_name) => {
-        console.log("Fetching embedding arguments for:", emb_name);
         if (!emb_name) return;
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
             console.error("API URLs not provided");
             return;
         }
 
-        // Check if we've already fetched this embedding's arguments
         if (fetchedRef.current[emb_name]) {
-            console.log("Already fetched arguments for:", emb_name);
             return;
         }
 
@@ -87,24 +81,31 @@ export function EmbeddingsField(props) {
             }
 
             const data = await response.json();
-            // Mark this embedding as fetched
             fetchedRef.current[emb_name] = true;
 
             if (values && setFieldValue) {
-                // Get the current embeddings array
                 const currentEmbeddings = values.trainingStrategy.embeddings || [];
-                // Find the current embedding index
                 const index = currentIndex;
                 if (index !== null && index >= 0 && index < currentEmbeddings.length) {
-                    // Create a new embedding object with the updated arguments
+                    const processedData = {};
+                    Object.entries(data).forEach(([key, value]) => {
+                        if (Array.isArray(value)) {
+                            const array_data = {};
+                            Object.entries(value).forEach(([subkey, subvalue]) => {
+                                array_data[subvalue] = false;
+                            });
+                            processedData[key] = array_data;
+                        } else {
+                            processedData[key] = value;
+                        }
+                    });
+
                     const updatedEmbedding = {
                         ...currentEmbeddings[index],
-                        arguments: data
+                        arguments: processedData
                     };
-                    // Create a new embeddings array with the updated embedding
                     const updatedEmbeddings = [...currentEmbeddings];
                     updatedEmbeddings[index] = updatedEmbedding;
-                    // Update the embeddings array in the form values
                     setFieldValue('trainingStrategy.embeddings', updatedEmbeddings);
                 }
             }
@@ -119,22 +120,16 @@ export function EmbeddingsField(props) {
         const selectedEmbeddingId = event.target.value;
 
         if (values && setFieldValue) {
-            // Get the current embeddings array
             const currentEmbeddings = values.trainingStrategy.embeddings || [];
-            // Find the current embedding index
             const index = currentIndex;
             if (index !== null && index >= 0 && index < currentEmbeddings.length) {
-                // Create a new embedding object with the updated name
                 const updatedEmbedding = {name: selectedEmbeddingId, arguments: {}};
-                // Create a new embeddings array with the updated embedding
                 const updatedEmbeddings = [...currentEmbeddings];
                 updatedEmbeddings[index] = updatedEmbedding;
-                // Update the embeddings array in the form values
                 setFieldValue('trainingStrategy.embeddings', updatedEmbeddings);
             }
         }
 
-        // Reset the fetched status for this embedding to force a new fetch
         if (selectedEmbeddingId) {
             fetchedRef.current[selectedEmbeddingId] = false;
         }
@@ -142,7 +137,7 @@ export function EmbeddingsField(props) {
         fetchEmbeddingArguments(selectedEmbeddingId);
     };
 
-    const handleListItemChange = (paramName, checked) => {
+    const handleListItemChange = (paramName, itemName, checked) => {
         if (!values || !setFieldValue) return;
 
         const currentEmbeddings = values.trainingStrategy.embeddings || [];
@@ -151,21 +146,17 @@ export function EmbeddingsField(props) {
 
         const currentEmbedding = currentEmbeddings[index];
         const currentArguments = currentEmbedding.arguments || {};
-        const paramList = currentArguments.arguments?.descriptors || [];
+        const currentItem = currentArguments[paramName] || {};
 
-        let updatedList;
-        if (checked) {
-            updatedList = [...paramList, paramName];
-        } else {
-            updatedList = paramList.filter(val => val !== paramName);
+        const updatedItem = {
+            ...currentItem,
+            [itemName]: checked
         }
 
-        let updatedArguments;
-        if (updatedList.length) {
-            updatedArguments = {descriptors: updatedList};
-        } else {
-            updatedArguments = {};
-        }
+        const updatedArguments = {
+            ...currentArguments,
+            [paramName]: updatedItem
+        };
 
         const updatedEmbedding = {
             ...currentEmbedding,
@@ -178,30 +169,27 @@ export function EmbeddingsField(props) {
         setFieldValue('trainingStrategy.embeddings', updatedEmbeddings);
     };
 
-    const renderParamInput = (paramValue, paramName) => {
-        if (!Number.isNaN(parseInt(paramName))) {
-            const currentEmbeddings = values?.trainingStrategy?.embeddings || [];
-            const currentEmbedding = currentIndex !== null && currentIndex >= 0 && currentIndex < currentEmbeddings.length
-                ? currentEmbeddings[currentIndex]
-                : null;
-            const descriptors = currentEmbedding?.arguments?.descriptors || [];
-            const isChecked = descriptors.includes(paramValue);
-
+    const renderParamInput = (paramName, paramValue) => {
+        if (typeof paramValue === "object") {
             return (
                 <div className="mt-2">
-                    <div className="form-check">
-                        <input
-                            type="checkbox"
-                            className="form-check-input"
-                            id={`${embeddingPrefix}-${paramValue}`}
-                            value={paramValue}
-                            checked={isChecked}
-                            onChange={(e) => handleListItemChange(paramValue, e.target.checked)}
-                        />
-                        <label className="form-check-label" htmlFor={`${embeddingPrefix}-${paramName}`}>
-                            {paramValue}
-                        </label>
-                    </div>
+                    {Object.entries(paramValue).map(([key, value]) => (
+                        <div key={key} className="form-check" style={{margin: '5px'}}>
+                            <input
+                                type="checkbox"
+                                className="form-check-input"
+                                id={`${embeddingPrefix}-${paramName}-${key}`}
+                                value={key}
+                                checked={value}
+                                onChange={(e) => {
+                                    handleListItemChange(paramName, key, e.target.checked);
+                                }}
+                            />
+                            <label className="form-check-label" htmlFor={`${embeddingPrefix}-${paramName}-${key}`}>
+                                {key}
+                            </label>
+                        </div>
+                    ))}
                 </div>
             );
         } else {
@@ -259,13 +247,13 @@ export function EmbeddingsField(props) {
                 ) : values && values.trainingStrategy && values.trainingStrategy.embeddings && currentIndex !== null ? (
                     <div className="mt-3">
                         <h5>Arguments</h5>
-                        <div>
-                            {values.trainingStrategy.embeddings[currentIndex].arguments && 
-                             Object.entries(values.trainingStrategy.embeddings[currentIndex].arguments).map(([paramName, paramValue]) => (
-                                <div key={paramName} className="mb-3">
-                                    {renderParamInput(paramValue, paramName)}
-                                </div>
-                            ))}
+                        <div style={{maxHeight: '250px', overflowY: 'auto'}}>
+                            {values.trainingStrategy.embeddings[currentIndex].arguments &&
+                                Object.entries(values.trainingStrategy.embeddings[currentIndex].arguments).map(([paramName, paramValue]) => (
+                                    <div key={paramName} className="mb-3">
+                                        {renderParamInput(paramName, paramValue)}
+                                    </div>
+                                ))}
                         </div>
                     </div>
                 ) : (
@@ -279,23 +267,32 @@ export function EmbeddingsField(props) {
 
     return (
         <React.Fragment>
-            {values && values.trainingStrategy.embeddings && values.trainingStrategy.embeddings.map((embedding, index) => (
-                <div key={index} className="mb-4 p-3 border rounded">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h5 className="mb-0">Embedding {index + 1}</h5>
-                        {values.trainingStrategy.embeddings.length > 1 && (
-                            <Button color="danger" size="sm" onClick={() => removeEmbedding(index)}>
-                                Remove
-                            </Button>
-                        )}
+            <div className="row">
+                {values && values.trainingStrategy.embeddings && values.trainingStrategy.embeddings.map((embedding, index) => (
+                    <div key={index} className="col-md-4 mb-4">
+                        <div
+                            className="p-3 border rounded"
+                            style={{
+                                     backgroundColor: `hsl(${Math.random() * 360}, 25%, 95%)`
+                            }}
+                        >
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <h5 className="mb-0">Embedding {index + 1}</h5>
+                                {values.trainingStrategy.embeddings.length > 1 && (
+                                    <Button color="danger" size="sm" onClick={() => removeEmbedding(index)}>
+                                        Remove
+                                    </Button>
+                                )}
+                            </div>
+                            <EmbeddingsField
+                                {...props}
+                                embeddingPrefix={`trainingStrategy.embeddings[${index}]`}
+                                formikProps={props.formikProps}
+                            />
+                        </div>
                     </div>
-                    <EmbeddingsField
-                        {...props}
-                        embeddingPrefix={`trainingStrategy.embeddings[${index}]`}
-                        formikProps={props.formikProps}
-                    />
-                </div>
-            ))}
+                ))}
+            </div>
             <Button color="primary" onClick={addEmbedding} className="mt-2">
                 Add Embedding
             </Button>
