@@ -1,10 +1,11 @@
 import React from 'react';
 import { Col, FormGroup, Input, Label } from 'reactstrap';
 import { Field } from 'formik';
-import { FieldErrorMessage } from '../../../../genui';
+import {EmbeddingsField, FieldErrorMessage} from '../../../../genui';
 
 export function MapTrainFields(props) {
   const trainingStrategyPrefix = props.trainingStrategyPrefix;
+  const formikProps = props.formikProps;
 
   return (
     <React.Fragment>
@@ -13,15 +14,12 @@ export function MapTrainFields(props) {
         <p>
           Choose one or more descriptor sets to use in the calculations.
         </p>
-        <Field name={`${trainingStrategyPrefix}.embeddings`} as={Input} type="select" multiple>
-          {
-            props.embeddings.map((desc) => (
-              <option key={desc.id} value={desc.id}>
-                {desc.name}
-              </option>
-            ))
-          }
-        </Field>
+          <EmbeddingsField
+              {...props}
+              description="Choose one or more descriptor sets to use in the calculations."
+              trainingStrategyPrefix={trainingStrategyPrefix}
+              formikProps={formikProps}
+          />
       </FormGroup>
       <FieldErrorMessage name={`${trainingStrategyPrefix}.embeddings`}/>
     </React.Fragment>

@@ -1,7 +1,7 @@
 import React from "react";
-import { FormikModelUploadForm, ModelCardNew } from '../../../genui';
+import { FormikModelUploadForm, ModelCardNew, EmbeddingsField } from '../../../genui';
 import * as Yup from 'yup';
-import { EmbeddingsField, PredictionsFields } from './QSARModelFormFields';
+import { PredictionsFields } from './QSARModelFormFields';
 
 export default function QSARModelCreateFromFileCard (props) {
   const [embeddings, setEmbeddings] = React.useState([]);

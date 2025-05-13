@@ -1,33 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CardBody, CardHeader, DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from 'reactstrap';
 import ModelFormRenderer from './ModelFormRenderer';
 import ModelFormCardBody from './ModelFormCardBody';
 import FormikModelForm from './FormikModelForm';
 
-class ModelCardNew extends React.Component {
+const ModelCardNew = (props) => {
+  const [algorithm, setAlgorithm] = useState(props.chosenAlgorithm);
 
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      algorithm : this.props.chosenAlgorithm
-    };
-  }
-
-  newModelFromFormData = (data) => {
-    if (this.props.prePost) {
-      data = this.props.prePost(data);
+  const newModelFromFormData = (data) => {
+    if (props.prePost) {
+      data = props.prePost(data);
     }
     if (data.hasOwnProperty("modelFile")) {
       data.build = false;
-      this.postModelData(data, this.postFiles(data));
+      postModelData(data, postFiles(data));
     } else {
       data.build = true;
-      this.postModelData(data)
+      postModelData(data);
     }
   };
 
-  postFiles = (originalFormData) => {
+  const postFiles = (originalFormData) => {
     // console.log(originalFormData);
     return (modelData) => {
       const modelID = modelData.id;
@@ -58,26 +51,19 @@ class ModelCardNew extends React.Component {
           }
         }
       }
-      // this.setState({nUploads : nFiles});
+      // No need for setState in functional component
 
-      const filesUrl = new URL(`${modelID}/files/`, this.props.listURL);
+      const filesUrl = new URL(`${modelID}/files/`, props.listURL);
       datas.forEach((data) => {
         fetch(filesUrl, {
           method: 'POST',
           body: data,
           credentials: "include",
         })
-          .then(resp => this.props.handleResponseErrors(resp, "Uploading file failed."))
+          .then(resp => props.handleResponseErrors(resp, "Uploading file failed."))
           // .then(data => {
-            // TODO: use this to inform the user about upload progress before elevating the state change to parent with "this.props.handleAddModel"
-            // this.setState(prevState => {
-            //   prevState.uploads.push(data);
-            //   console.log(prevState);
-            //   return {
-            //     uploads: prevState.uploads,
-            //     uploadFinished: prevState.nUploads === prevState.uploads.length,
-            //   }
-            // })
+            // TODO: use this to inform the user about upload progress before elevating the state change to parent with "props.handleAddModel"
+            // No need for setState in functional component
           // })
           .catch(err => console.log(err)); // TODO: record an error for this file in state
       });
@@ -86,9 +72,9 @@ class ModelCardNew extends React.Component {
     }
   };
 
-  postModelData = (data, afterModelPOST) => {
+  const postModelData = (data, afterModelPOST) => {
     fetch(
-      this.props.listURL
+      props.listURL
       , {
         method: 'POST'
         , body: JSON.stringify(data)
@@ -97,7 +83,7 @@ class ModelCardNew extends React.Component {
         },
         credentials: "include",
       }
-    ).then((data) => this.props.handleResponseErrors(data, "Creating model failed. Data wrong or incomplete?"))
+    ).then((data) => props.handleResponseErrors(data, "Creating model failed. Data wrong or incomplete?"))
       .then(modelData => {
         if (afterModelPOST) {
           return afterModelPOST(modelData);
@@ -106,48 +92,47 @@ class ModelCardNew extends React.Component {
       })
       .then(
         modelData => {
-          this.props.handleCreate(this.props.modelClass, modelData); // TODO: check if uploads finished fine before delegating
+          props.handleCreate(props.modelClass, modelData); // TODO: check if uploads finished fine before delegating
         }
       ).catch(
       error => console.log(error)
     );
   };
 
-  render() {
-    // if (this.state.nUploads > 0 && !this.state.uploadFinished) {
-    //   return <div>Uploading files...</div>
-    // }
+  // No render method in functional component
+  // if (nUploads > 0 && !uploadFinished) {
+  //   return <div>Uploading files...</div>
+  // }
 
-    return (
-      this.state.algorithm ? (
-        <React.Fragment>
-          <CardHeader>Create New {this.state.algorithm.name} Model</CardHeader>
-          <ModelFormRenderer
-            {...this.props} // all these props will be passed down to the component
-            chosenAlgorithm={this.state.algorithm}
-            component={props => <ModelFormCardBody {...props} form={this.props.form ? this.props.form : FormikModelForm}/>} // this is what should draw the formik form and pass the renderer props to it
-            handleCreate={this.newModelFromFormData} // this is the method used to process the parsed data from the form
-            project={this.props.currentProject} // this is required
-            formNameSuffix="create" // this is required
-          />
-        </React.Fragment>
-      ) : (
-        <React.Fragment>
-          <CardHeader>Select Algorithm</CardHeader>
-          <CardBody>
-            <UncontrolledDropdown>
-              <DropdownToggle caret color="primary">Choose Algorithm</DropdownToggle>
-              <DropdownMenu>
-                {
-                  this.props.algorithmChoices.map(item => <DropdownItem key={item.id} onClick={() => this.setState({algorithm: item})}>{item.name}</DropdownItem>)
-                }
-              </DropdownMenu>
-            </UncontrolledDropdown>
-          </CardBody>
-        </React.Fragment>
-      )
+  return (
+    algorithm ? (
+      <React.Fragment>
+        <CardHeader>Create New {algorithm.name} Model</CardHeader>
+        <ModelFormRenderer
+          {...props} // all these props will be passed down to the component
+          chosenAlgorithm={algorithm}
+          component={props => <ModelFormCardBody {...props} form={props.form ? props.form : FormikModelForm}/>} // this is what should draw the formik form and pass the renderer props to it
+          handleCreate={newModelFromFormData} // this is the method used to process the parsed data from the form
+          project={props.currentProject} // this is required
+          formNameSuffix="create" // this is required
+        />
+      </React.Fragment>
+    ) : (
+      <React.Fragment>
+        <CardHeader>Select Algorithm</CardHeader>
+        <CardBody>
+          <UncontrolledDropdown>
+            <DropdownToggle caret color="primary">Choose Algorithm</DropdownToggle>
+            <DropdownMenu>
+              {
+                props.algorithmChoices.map(item => <DropdownItem key={item.id} onClick={() => setAlgorithm(item)}>{item.name}</DropdownItem>)
+              }
+            </DropdownMenu>
+          </UncontrolledDropdown>
+        </CardBody>
+      </React.Fragment>
     )
-  }
-}
+  );
+};
 
 export default ModelCardNew;

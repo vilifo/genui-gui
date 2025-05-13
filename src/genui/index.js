@@ -49,6 +49,7 @@ import MolsetActivitiesSummary from './components/compounds/tabs/MolsetActivitie
 import EditMolSet from "./components/compounds/tabs/EditMolSet";
 import ExportMolSet from "./components/compounds/tabs/ExportMolSet";
 import {MoleculeProvider, MoleculeListProvider} from "./components/compounds/MoleculeProviders";
+import {EmbeddingsField} from "./EmbeddingField";
 
 // TODO: structure this list in a more sensible way
 export {
@@ -118,5 +119,6 @@ export {
   EditMolSet,
   MoleculeProvider,
   MoleculeListProvider,
-  ExportMolSet
+  ExportMolSet,
+  EmbeddingsField
 }

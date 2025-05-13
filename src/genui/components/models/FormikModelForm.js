@@ -105,6 +105,7 @@ function FormikModelForm (props) {
                       <TrainingStrategyExtras
                         {...props}
                         trainingStrategyPrefix={trainingStrategyPrefix}
+                        formikProps={formik}
                       /> : null
                   }
 

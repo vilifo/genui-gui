@@ -77,118 +77,107 @@ function ModelFiles(props) {
   )
 }
 
-class ModelInfo extends React.Component {
+function ModelInfo({
+                     model,
+                     modelData,
+                     extraTrainingParams,
+                     extraValidationParams,
+                     modelUrl,
+                     extraInfoComponent,
+                     ...props
+                   }) {
+  const trainingStrategy = model.trainingStrategy;
 
-  constructor(props) {
-    super(props);
+  const trainingParams = (trainingStrategy ? [
+    {
+      name: "Algorithm",
+      value: trainingStrategy.algorithm.name
+    },
+    {
+      name: "Parameters",
+      value: trainingStrategy.parameters.map((param) => `${param.parameter.name}=${param.value}`).join(";")
+    },
+    {
+      name: "Mode",
+      value: trainingStrategy.mode.name
+    },
+  ] : []).concat(extraTrainingParams || []);
 
-    this.model = this.props.model;
-    const trainingStrategy =  this.model.trainingStrategy;
+  const validationStrategy = model.validationStrategy;
+  const validationParams = (validationStrategy ? [
+    {
+      name: "Metrics",
+      value: validationStrategy.metrics.map((metric) => `${metric.name}`).join(";")
+    }
+  ] : []).concat(extraValidationParams || []);
 
-    this.trainingParams = (trainingStrategy ? [
-      {
-        name : "Algorithm",
-        value : trainingStrategy.algorithm.name
-      },
-      {
-        name : "Parameters",
-        value : trainingStrategy.parameters.map((param) => `${param.parameter.name}=${param.value}`).join(";")
-      },
-      {
-        name : "Mode",
-        value : trainingStrategy.mode.name
-      },
-    ] : []).concat(
-      this.props.extraTrainingParams ? this.props.extraTrainingParams : []
-    );
-
-    const validationStrategy = this.model.validationStrategy;
-    this.validationParams = (validationStrategy ? [
-      {
-        name: "Metrics",
-        value: validationStrategy.metrics.map((metric) => `${metric.name}`).join(";")
-      }
-    ] : []).concat(
-      this.props.extraValidationParams ? this.props.extraValidationParams : []
-    );
-  }
-
-  render() {
-    const model = this.model;
-
-    return (
-      (<Row>
+  return (
+      <Row>
         <Col sm="12">
-          {
-            model.description ? (
+          {model.description && (
               <React.Fragment>
                 <h4>Description</h4>
                 <p>{model.description}</p>
               </React.Fragment>
-            ) : null
-          }
+          )}
 
-          {
-            this.props.modelData ? (
+          {modelData && (
               <React.Fragment>
                 <h4>Model Data</h4>
                 <Table size="sm">
                   <TableHeaderFromItems
-                    items={["Item", "Value"]}
+                      items={["Item", "Value"]}
                   />
                   <TableDataFromItems
-                    items={this.props.modelData}
-                    dataProps={["value"]}
-                    rowHeaderProp="name"
+                      items={modelData}
+                      dataProps={["value"]}
+                      rowHeaderProp="name"
                   />
                 </Table>
               </React.Fragment>
-            ) : null
-          }
+          )}
 
           <h4>Training Settings</h4>
           <Table size="sm">
             <TableHeaderFromItems
-            items={["Parameter", "Value"]}
+                items={["Parameter", "Value"]}
             />
             <TableDataFromItems
-              items={this.trainingParams}
-              dataProps={["value"]}
-              rowHeaderProp="name"
+                items={trainingParams}
+                dataProps={["value"]}
+                rowHeaderProp="name"
             />
           </Table>
 
           <h4>Validation Settings</h4>
-          {
-            this.validationParams.length > 0 ? (
+          {validationParams.length > 0 ? (
               <Table size="sm">
                 <TableHeaderFromItems
-                  items={["Parameter", "Value"]}
+                    items={["Parameter", "Value"]}
                 />
                 <TableDataFromItems
-                  items={this.validationParams}
-                  dataProps={["value"]}
-                  rowHeaderProp="name"
+                    items={validationParams}
+                    dataProps={["value"]}
+                    rowHeaderProp="name"
                 />
               </Table>
-            ) : <p>No validation data available for this model.</p>
-          }
+          ) : (
+              <p>No validation data available for this model.</p>
+          )}
 
           <ModelFiles
-            {...this.props}
+              model={model}
+              {...props}
           />
           <br/>
 
           <h4>Useful API URLs</h4>
-          <a href={this.props.modelUrl.toString()} target="_blank" rel="noopener noreferrer">{this.props.modelUrl.toString()}</a>
+          <a href={modelUrl.toString()} target="_blank" rel="noopener noreferrer">{modelUrl.toString()}</a>
 
-          {
-            this.props.extraInfoComponent ? <this.props.extraInfoComponent {...this.props} /> : null
-          }
+          {extraInfoComponent && <extraInfoComponent model={model} modelUrl={modelUrl} {...props} />}
         </Col>
-      </Row>)
-    )
-  }
+      </Row>
+  );
 }
 
 export default ModelInfo;
