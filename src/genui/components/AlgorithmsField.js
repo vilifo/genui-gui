@@ -1,45 +1,50 @@
 import React from 'react';
 import {Button, Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
-import {FieldErrorMessage} from '../genui';
+import FieldErrorMessage from './forms/FieldErrorMessage';
 
-export function EmbeddingsField(props) {
-    const embeddingPrefix = props.embeddingPrefix;
-    const currentIndex = embeddingPrefix ? parseInt(embeddingPrefix.split('[')[1].split(']')[0]) : null;
+export function AlgorithmsField(props) {
+    const algorithmPrefix = props.algorithmPrefix;
+    const currentIndex = algorithmPrefix ? parseInt(algorithmPrefix.split('[')[1].split(']')[0]) : null;
     const [loading, setLoading] = React.useState(false);
-    const [embeddings, setEmbeddings] = React.useState([]);
-    const [loadingEmbeddings, setLoadingEmbeddings] = React.useState(false);
+    const [allAlgorithms, setAllAlgorithms] = React.useState(props.allAlgorithms || []);
+    const [loadingAlgorithms, setLoadingAlgorithms] = React.useState(false);
     const {values, setFieldValue} = props.formikProps || {};
     const fetchedRef = React.useRef({});
+    console.log(props);
 
-    const addEmbedding = () => {
+    const addAlgorithm = () => {
         if (values && setFieldValue) {
-            const currentEmbeddings = values.trainingStrategy.embeddings || [];
+            const currentAlgorithms = values.trainingStrategy.embeddings || [];
             setFieldValue('trainingStrategy.embeddings', [
-                ...currentEmbeddings,
-                {name: "MorganFP", arguments: {}}
+                ...currentAlgorithms,
+                {name: allAlgorithms, arguments: {}}
             ]);
         }
     };
 
-    const removeEmbedding = (index) => {
+    const removeAlgorithm = (index) => {
         if (values && setFieldValue) {
-            const currentEmbeddings = [...(values.trainingStrategy.embeddings || [])];
-            currentEmbeddings.splice(index, 1);
-            setFieldValue('trainingStrategy.embeddings', currentEmbeddings);
+            const currentAlgorithm = [...(values.trainingStrategy.embeddings || [])];
+            currentAlgorithm.splice(index, 1);
+            setFieldValue('trainingStrategy.embeddings', currentAlgorithm);
         }
     };
 
     // Fetch available embeddings when component mounts
-    const fetchEmbeddings = React.useCallback(async () => {
+    const fetchAlgorithms = React.useCallback(async () => {
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
             console.error("API URLs not provided");
             return;
         }
 
-        setLoadingEmbeddings(true);
+        if (allAlgorithms.length > 0) {
+            return;
+        }
+
+        setLoadingAlgorithms(true);
         try {
-            const url = new URL('embeddings/list/', props.apiUrls.qsarRoot);
+            const url = new URL(`models/qsprpred/sklearn/mode/${props.modes.name}/`, props.apiUrls.qsarRoot);
             const response = await fetch(url.toString(), {
                 credentials: "include",
             });
@@ -49,29 +54,29 @@ export function EmbeddingsField(props) {
             }
 
             const data = await response.json();
-            setEmbeddings(data);
+            setAllAlgorithms(data);
         } catch (error) {
             console.error("Error fetching embeddings:", error);
         } finally {
-            setLoadingEmbeddings(false);
+            setLoadingAlgorithms(false);
         }
-    }, [props.apiUrls, setEmbeddings]);
+    }, [props.apiUrls, allAlgorithms.length, setAllAlgorithms, props.modes.name]);
 
     // Fetch embedding arguments when an embedding is selected and set their values
-    const fetchEmbeddingArguments = React.useCallback(async (emb_name) => {
-        if (!emb_name) return;
+    const fetchAlgorithmParameters = React.useCallback(async (alg_name) => {
+        if (!alg_name) return;
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
             console.error("API URLs not provided");
             return;
         }
 
-        if (fetchedRef.current[emb_name]) {
+        if (fetchedRef.current[alg_name]) {
             return;
         }
 
         setLoading(true);
         try {
-            const url = new URL(`embeddings/${emb_name}/arguments`, props.apiUrls.qsarRoot);
+            const url = new URL(`models/qsprpred/sklearn/${alg_name}/arguments`, props.apiUrls.qsarRoot);
             const response = await fetch(url.toString(), {
                 credentials: "include",
             });
@@ -81,7 +86,7 @@ export function EmbeddingsField(props) {
             }
 
             const data = await response.json();
-            fetchedRef.current[emb_name] = true;
+            fetchedRef.current[alg_name] = true;
 
             if (values && setFieldValue) {
                 const currentEmbeddings = values.trainingStrategy.embeddings || [];
@@ -134,7 +139,7 @@ export function EmbeddingsField(props) {
             fetchedRef.current[selectedEmbeddingId] = false;
         }
 
-        fetchEmbeddingArguments(selectedEmbeddingId);
+        fetchAlgorithmParameters(selectedEmbeddingId);
     };
 
     const handleListItemChange = (paramName, itemName, checked) => {
@@ -178,14 +183,14 @@ export function EmbeddingsField(props) {
                             <input
                                 type="checkbox"
                                 className="form-check-input"
-                                id={`${embeddingPrefix}-${paramName}-${key}`}
+                                id={`${algorithmPrefix}-${paramName}-${key}`}
                                 value={key}
                                 checked={value}
                                 onChange={(e) => {
                                     handleListItemChange(paramName, key, e.target.checked);
                                 }}
                             />
-                            <label className="form-check-label" htmlFor={`${embeddingPrefix}-${paramName}-${key}`}>
+                            <label className="form-check-label" htmlFor={`${algorithmPrefix}-${paramName}-${key}`}>
                                 {key}
                             </label>
                         </div>
@@ -197,7 +202,7 @@ export function EmbeddingsField(props) {
                 <div>
                     <Label>{paramName}</Label>
                     <Col sm={8}>
-                        <Field name={paramName} as={Input} value={paramValue} type="number"/>
+                        <Field name={`${algorithmPrefix}.arguments.${paramName}`} as={Input} type="number"/>
                     </Col>
                 </div>
             );
@@ -208,37 +213,42 @@ export function EmbeddingsField(props) {
         ? values.trainingStrategy.embeddings[currentIndex].name
         : null;
 
+    const currentEmbeddings = values.trainingStrategy.embeddings || [];
+    const availableEmbeddings = [...allAlgorithms.filter(embedding => !currentEmbeddings.some(current => current.name === embedding)),
+        currentEmbeddingId];
+
+
     React.useEffect(() => {
-        fetchEmbeddings();
-    }, [fetchEmbeddings]);
+        fetchAlgorithms();
+    }, [fetchAlgorithms]);
 
     React.useEffect(() => {
         if (currentEmbeddingId) {
-            fetchEmbeddingArguments(currentEmbeddingId);
+            fetchAlgorithmParameters(currentEmbeddingId);
         }
-    }, [currentEmbeddingId, fetchEmbeddingArguments]);
+    }, [currentEmbeddingId, fetchAlgorithmParameters]);
 
-    if (embeddingPrefix && embeddingPrefix.includes('[')) {
+    if (algorithmPrefix && algorithmPrefix.includes('[')) {
         return (
             <React.Fragment>
                 <FormGroup>
                     <Field
-                        name={`${embeddingPrefix}.name`}
+                        name={`${algorithmPrefix}.name`}
                         as={Input}
                         type="select"
                         onChange={handleEmbeddingChange}
-                        disabled={loadingEmbeddings}
+                        disabled={loadingAlgorithms}
                     >
-                        {loadingEmbeddings ? (
+                        {loadingAlgorithms ? (
                             <option value="" disabled>Loading embeddings...</option>
                         ) : (
-                            embeddings.map((desc) => (
+                            availableEmbeddings.map((desc) => (
                                 <option key={desc} value={desc}>{desc}</option>
                             ))
                         )}
                     </Field>
                 </FormGroup>
-                <FieldErrorMessage name={`${embeddingPrefix}.name`}/>
+                <FieldErrorMessage name={`${algorithmPrefix}.name`}/>
 
                 {/* Display embedding arguments if available */}
                 {loading ? (
@@ -256,8 +266,8 @@ export function EmbeddingsField(props) {
                         </div>
                     </div>
                 ) : (
-                    values && values.trainingStrategy && values.trainingStrategy.embeddings && 
-                    currentIndex !== null && values.trainingStrategy.embeddings[currentIndex].name && 
+                    values && values.trainingStrategy && values.trainingStrategy.embeddings &&
+                    currentIndex !== null && values.trainingStrategy.embeddings[currentIndex].name &&
                     <p>No arguments available for this embedding.</p>
                 )}
             </React.Fragment>
@@ -278,23 +288,37 @@ export function EmbeddingsField(props) {
                             <div className="d-flex justify-content-between align-items-center mb-3">
                                 <h5 className="mb-0">Embedding {index + 1}</h5>
                                 {values.trainingStrategy.embeddings.length > 1 && (
-                                    <Button color="danger" size="sm" onClick={() => removeEmbedding(index)}>
+                                    <Button color="danger" size="sm" onClick={() => removeAlgorithm(index)}>
                                         Remove
                                     </Button>
                                 )}
                             </div>
-                            <EmbeddingsField
+                            <AlgorithmsField
                                 {...props}
-                                embeddingPrefix={`trainingStrategy.embeddings[${index}]`}
+                                algorithmPrefix={`trainingStrategy.algorithm[${index}]`}
                                 formikProps={props.formikProps}
+                                allAlgorithms={allAlgorithms}
                             />
                         </div>
                     </div>
                 ))}
             </div>
-            <Button color="primary" onClick={addEmbedding} className="mt-2">
+            <Button color="primary" onClick={addAlgorithm} className="mt-2">
                 Add Embedding
             </Button>
         </React.Fragment>
     );
 }
+// {/*{*/}
+// {/*  parameters.map(param => {*/}
+// {/*    const name = `${trainingStrategyPrefix}.parameters.${param.name}`;*/}
+// {/*    return (*/}
+// {/*      <FormGroup key={name} row>*/}
+// {/*        <Label htmlFor={name} sm={4}>{param.name}</Label>*/}
+// {/*        <Col sm={8}>*/}
+// {/*          <ParameterField parameter={param} name={name}/>*/}
+// {/*          <FieldErrorMessage name={name}/>*/}
+// {/*        </Col>*/}
+// {/*      </FormGroup>*/}
+// {/*    )})*/}
+// {/*}*/}

@@ -1,7 +1,7 @@
 import React from 'react';
 import {Button, Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
-import {FieldErrorMessage, EmbeddingsField} from '../../../genui';
+import {FieldErrorMessage, EmbeddingsField, AlgorithmsField} from '../../../genui';
 
 export function PredictionsFields(props) {
     return (
@@ -33,7 +33,7 @@ export function PredictionsFields(props) {
 export function QSARTrainingFields(props) {
     const trainingStrategyPrefix = props.trainingStrategyPrefix;
     const formikProps = props.formikProps;
-
+    const parameters = props.parameters;
 
     return (
         <React.Fragment>
@@ -74,13 +74,30 @@ export function QSARTrainingFields(props) {
                     </React.Fragment>
                 ) : null
             }
-
-            <EmbeddingsField
-                {...props}
-                description="Choose one or more descriptor sets to use in the calculations."
-                trainingStrategyPrefix={trainingStrategyPrefix}
-                formikProps={formikProps}
-            />
+            <FormGroup>
+                <Label htmlFor={`${trainingStrategyPrefix}.embeddings`}>Descriptor Sets</Label>
+                <p>
+                    Choose one or more descriptor sets to use in the calculations.
+                </p>
+                <EmbeddingsField
+                    {...props}
+                    description="Choose one or more descriptor sets to use in the calculations."
+                    trainingStrategyPrefix={trainingStrategyPrefix}
+                    formikProps={formikProps}
+                />
+            </FormGroup>
+            {parameters.length > 0 ? <h4>{props.chosenAlgorithm.name} Parameters</h4> : null}
+            <FormGroup>
+                <p>
+                    Choose one or more algorithms to use in model.
+                </p>
+                <AlgorithmsField
+                    {...props}
+                    description="Choose one or more descriptor sets to use in the calculations."
+                    trainingStrategyPrefix={trainingStrategyPrefix}
+                    formikProps={formikProps}
+                />
+            </FormGroup>
         </React.Fragment>
     )
 }

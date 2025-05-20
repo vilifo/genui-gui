@@ -1,6 +1,6 @@
 import React from 'react';
 import { Field, Formik } from 'formik';
-import { Col, Form, FormGroup, FormText, Input, Label } from 'reactstrap';
+import { Form, FormGroup, FormText, Input, Label } from 'reactstrap';
 import { FieldErrorMessage, FileUpload } from '../../index';
 
 class ParameterField extends React.Component {
@@ -20,7 +20,6 @@ function FormikModelForm (props) {
   const validationStrategyPrefix = "validationStrategy";
   const trainingStrategyPrefix = "trainingStrategy";
   const modes = props.modes;
-  const parameters = props.parameters;
 
   const TrainingStrategyExtras = props.trainingStrategyFields;
   const ValidationStrategyExtras = props.validationStrategyFields;
@@ -107,22 +106,6 @@ function FormikModelForm (props) {
                         trainingStrategyPrefix={trainingStrategyPrefix}
                         formikProps={formik}
                       /> : null
-                  }
-
-                  {parameters.length > 0 ? <h4>{props.chosenAlgorithm.name} Parameters</h4> : null}
-
-                  {
-                    parameters.map(param => {
-                      const name = `${trainingStrategyPrefix}.parameters.${param.name}`;
-                      return (
-                        <FormGroup key={name} row>
-                          <Label htmlFor={name} sm={4}>{param.name}</Label>
-                          <Col sm={8}>
-                            <ParameterField parameter={param} name={name}/>
-                            <FieldErrorMessage name={name}/>
-                          </Col>
-                        </FormGroup>
-                      )})
                   }
                 </React.Fragment>
               ) : null
