@@ -102,51 +102,219 @@ export function QSARTrainingFields(props) {
     )
 }
 
-export function QSARValidationFields(props) {
+export function QSARValidationStrategies(props) {
     const validationStrategyPrefix = props.validationStrategyPrefix;
+    const currentIndex = validationStrategyPrefix?.match(/\[(\d+)\]/)?.at(1) ? parseInt(validationStrategyPrefix.match(/\[(\d+)\]/)[1]) : null;
+    const [loading, setLoading] = React.useState(false);
+    const fetchedRef = React.useRef({});
+    const [loadingDataSplits, setLoadingDataSplits] = React.useState(false);
+    const [allDataSplits, setAllDataSplits] = React.useState(props.allDataSplits || []);
     const {values, setFieldValue} = props.formikProps || {};
     const metrics = props.metrics;
-    const dataSplits = props.dataSplits;
 
     const addValidationStrategy = () => {
         if (values && setFieldValue) {
-            const currentValidationStrategies = values.validationStrategy || [];
-            const defaultMetrics = metrics && metrics.length > 0 ? [metrics[0].id] : [];
-            const defaultDataSplits = dataSplits && dataSplits.length > 0 ? [dataSplits] : [];
-            setFieldValue('validationStrategy', [
+            const currentValidationStrategies = values.validationStrategies || [];
+            const defaultMetric = metrics && metrics.length > 0 ? [metrics[0].id] : [];
+            const defaultDataSplit = allDataSplits && allDataSplits.length > 0 ? allDataSplits[0] : null;
+            setFieldValue('validationStrategies', [
                 ...currentValidationStrategies,
-                {validSetSize: 0.2, metrics: defaultMetrics, dataSplits: defaultDataSplits}
+                {cvFolds: 3, metrics: defaultMetric, dataSplit: defaultDataSplit}
             ]);
         }
     };
 
     const removeValidationStrategy = (index) => {
         if (values && setFieldValue) {
-            const currentValidationStrategies = [...(values.validationStrategy || [])];
+            const currentValidationStrategies = [...(values.validationStrategies || [])];
             currentValidationStrategies.splice(index, 1);
-            setFieldValue('validationStrategy', currentValidationStrategies);
+            setFieldValue('validationStrategies', currentValidationStrategies);
         }
     };
+
+    const fetchDataSplits = React.useCallback(async () => {
+        if (!props.apiUrls || !props.apiUrls.qsarRoot) {
+            console.error("API URLs not provided");
+            return;
+        }
+
+        if (allDataSplits.length > 0) {
+            return;
+        }
+
+        setLoadingDataSplits(true);
+        try {
+            const url = new URL(`data-splits/list/`, props.apiUrls.qsarRoot);
+            const response = await fetch(url.toString(), {
+                credentials: "include",
+            });
+            if (!response.ok) {
+                throw new Error(`Failed to fetch data splits: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            setAllDataSplits(data);
+        } catch (error) {
+            console.error("Error fetching algorithms:", error);
+        } finally {
+            setLoadingDataSplits(false);
+        }
+    }, [props.apiUrls, allDataSplits, setAllDataSplits]);
+
+    const fetchDataSplitParameters = React.useCallback(async (dataSplitName) => {
+        if (!dataSplitName) return;
+        if (!props.apiUrls || !props.apiUrls.qsarRoot) {
+            console.error("API URLs not provided");
+            return;
+        }
+
+        if (fetchedRef.current[dataSplitName]) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const url = new URL(`data-splits/${dataSplitName}/params`, props.apiUrls.qsarRoot);
+            const response = await fetch(url.toString(), {
+                credentials: "include",
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch data split params: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            fetchedRef.current[dataSplitName] = true;
+
+            if (values && setFieldValue) {
+                const currentValidationStrategies = values.validationStrategies || [];
+                const index = currentIndex;
+                if (index !== null && index >= 0 && index < currentValidationStrategies.length) {
+                    const updatedDataSplit = {
+                        name: dataSplitName,
+                        ...data
+                    };
+                    const updatedValidationStrategies = [...currentValidationStrategies];
+                    updatedValidationStrategies[index] = {
+                        ...updatedValidationStrategies[index],
+                        dataSplit: updatedDataSplit
+                    };
+                    setFieldValue('validationStrategies', updatedValidationStrategies);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching data split params:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, [props.apiUrls, values, setFieldValue, currentIndex]);
+
+    const handleDataSplitChange = (event) => {
+        const selectedDataSplitId = event.target.value;
+
+        if (values && setFieldValue) {
+            const currentValidationStrategies = values.validationStrategies || [];
+            const index = currentIndex;
+            if (index !== null && index >= 0 && index < currentValidationStrategies.length) {
+                const updatedDataSplit = {name: selectedDataSplitId};
+                const updatedValidationStrategies = [...currentValidationStrategies];
+                updatedValidationStrategies[index] = {
+                    ...updatedValidationStrategies[index],
+                    dataSplit: updatedDataSplit
+                };
+                setFieldValue('validationStrategies', updatedValidationStrategies);
+            }
+        }
+
+        if (selectedDataSplitId) {
+            fetchedRef.current[selectedDataSplitId] = false;
+        }
+
+        fetchDataSplitParameters(selectedDataSplitId);
+    };
+
+    const renderParamInput = (paramName, paramValue) => {
+        if (paramName === "name") {
+            return null;
+        } else if (paramName === "scaffold") {
+            return (
+                <FormGroup row>
+                    <Label htmlFor={`${validationStrategyPrefix}.scaffold`} sm={4}>Scaffold</Label>
+                    <Col sm={8}>
+                        <Field name={`${validationStrategyPrefix}.scaffold`} as={Input} type="text" value={paramValue}/>
+                    </Col>
+                </FormGroup>
+            );
+        } else {
+            return (
+                <FormGroup row>
+                    <Label htmlFor={`${validationStrategyPrefix}.${paramName}`} sm={4}>{paramName}</Label>
+                    <Col sm={8}>
+                        <Field name={`${validationStrategyPrefix}.${paramName}`} as={Input} type="number"
+                               value={paramValue}/>
+                    </Col>
+                </FormGroup>
+            );
+        }
+    };
+
+    const currentDataSplitId = values && values.validationStrategies && currentIndex !== null
+        ? values.validationStrategies[currentIndex].dataSplit.name
+        : null;
+
+    React.useEffect(() => {
+        fetchDataSplits();
+    }, [fetchDataSplits]);
+
+    React.useEffect(() => {
+        if (currentDataSplitId) {
+            fetchDataSplitParameters(currentDataSplitId);
+        }
+    }, [currentDataSplitId, fetchDataSplitParameters]);
 
     if (validationStrategyPrefix && validationStrategyPrefix.includes('[')) {
         return (
             <React.Fragment>
-                <FormGroup row>
+                <FormGroup>
                     <Label htmlFor={`${validationStrategyPrefix}.dataSplit`} sm={4}>Data Split</Label>
                     <Col sm={8}>
-                        <Field name={`${validationStrategyPrefix}.dataSplit`} as={Input} type="select" multiple>
-                            {
-                                dataSplits.map(dataSplit => (
-                                    <option key={dataSplit} value={dataSplit}>
-                                        {dataSplit}
-                                    </option>
+                        <Field
+                            name={`${validationStrategyPrefix}.dataSplit`}
+                            as={Input}
+                            type="select"
+                            onChange={handleDataSplitChange}
+                            disabled={loadingDataSplits}
+                        >
+                            {loadingDataSplits ? (
+                                <option value="" disabled>Loading data splits...</option>
+                            ) : (
+                                allDataSplits.map((desc) => (
+                                    <option key={desc} value={desc}>{desc}</option>
                                 ))
-                            }
+                            )}
                         </Field>
                     </Col>
                 </FormGroup>
-                <FieldErrorMessage name={`${validationStrategyPrefix}.validSetSize`}/>
-
+                <FieldErrorMessage name={`${validationStrategyPrefix}.dataSplit`}/>
+                {/* Display embedding parameters if available */}
+                {loading ? (
+                    <p>Loading parameters...</p>
+                ) : values && values.validationStrategies && currentIndex !== null ? (
+                    <div className="mt-3">
+                        <h5>Parameters</h5>
+                        <div style={{maxHeight: '250px', overflowY: 'auto'}}>
+                            {values.validationStrategies[currentIndex].dataSplit &&
+                                Object.entries(values.validationStrategies[currentIndex].dataSplit).map(([paramName, paramValue]) => (
+                                    <div key={paramName} className="mb-3">
+                                        {renderParamInput(paramName, paramValue)}
+                                    </div>
+                                ))}
+                        </div>
+                    </div>
+                ) : (
+                    values && values.validationStrategies && currentIndex !== null &&
+                    <p>No arguments available for this data split.</p>
+                )}
                 <FormGroup row>
                     <Label htmlFor={`${validationStrategyPrefix}.cvFolds`} sm={4}>Cross-Validation Folds</Label>
                     <Col sm={8}>
@@ -180,21 +348,23 @@ export function QSARValidationFields(props) {
 
     return (
         <React.Fragment>
-            {values && values.validationStrategy && values.validationStrategy.map((strategy, index) => (
-                <div key={index} className="mb-4 p-3 border rounded">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
+            {values && values.validationStrategies && values.validationStrategies.map((strategy, index) => (
+                <div key={index} className="col-md-4 mb-4">
+                    <div className="p-3 border rounded" style={{ backgroundColor: `hsl(${index * 137.5}, 90%, 90%)`}}>
+                        <div className="d-flex justify-content-between align-items-center mb-3">
                         <h5 className="mb-0">Validation Strategy {index + 1}</h5>
-                        {values.validationStrategy.length > 1 && (
+                        {values.validationStrategies.length > 1 && (
                             <Button color="danger" size="sm" onClick={() => removeValidationStrategy(index)}>
                                 Remove
                             </Button>
                         )}
                     </div>
-                    <QSARValidationFields
+                    <QSARValidationStrategies
                         {...props}
                         validationStrategyPrefix={`validationStrategy[${index}]`}
                         formikProps={props.formikProps}
                     />
+                    </div>
                 </div>
             ))}
             <Button color="primary" onClick={addValidationStrategy} className="mt-2">

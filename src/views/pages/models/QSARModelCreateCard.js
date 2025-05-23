@@ -1,7 +1,7 @@
 import * as Yup from 'yup';
 import {MolsetActivitiesSummary, ModelCardNew, SimpleDropDownToggle} from '../../../genui';
 import React from 'react';
-import {QSARExtraFields, QSARTrainingFields, QSARValidationFields} from './QSARModelFormFields';
+import {QSARExtraFields, QSARTrainingFields, QSARValidationStrategies} from './QSARModelFormFields';
 import {Button, CardBody, CardHeader, Col, Row, CardFooter} from 'reactstrap';
 
 function EndpointSelector(props) {
@@ -21,13 +21,19 @@ export default function QSARModelCreateCard(props) {
 
     const trainingStrategyInit = {
         activityThreshold: 6.5,
-        embeddings: props.embeddings && props.embeddings.length > 0 ? [{
-            id: props.embeddings[0],
-            params: {}
-        }] : [{id: "MorganFP", params: {}}],
+        embeddings: [{
+            name: "MorganFP",
+            arguments: {}
+        }],
+        parameters: {
+            alg: "RandomForestClassifier",
+            parameters: {}
+        }
     };
-    const validationStrategyInit = [{
+    const validationStrategiesInit = [{
         cvFolds: 3,
+        metrics: [1],
+        dataSplit: {name: "RandomSplit"},
     }];
     const extraParamInit = {
         molset: molset ? molset.id : undefined,
@@ -38,12 +44,16 @@ export default function QSARModelCreateCard(props) {
     const trainingStrategySchema = {
         activityThreshold: Yup.number().min(0, 'Activity threshold must be zero or positive.').required('Activity threshold is a required parameter.'),
         embeddings: Yup.array().of(Yup.object()).required('You need to select at least one embedding.'),
+        parameters: Yup.object().shape({
+            alg: Yup.string().required('You need to select an algorithm.'),
+            parameters: Yup.object().nullable()
+        }).required()
     };
-    const validationStrategySchema = Yup.array().of(
+    const validationStrategiesSchema = Yup.array().of(
         Yup.object().shape({
             cvFolds: Yup.number().integer().min(0, 'Number of CV folds must be at least 0.'),
             dataSplit: Yup.string(),
-            metrics: Yup.number()
+            metrics: Yup.array().of(Yup.number())
         })
     );
 
@@ -112,13 +122,13 @@ export default function QSARModelCreateCard(props) {
             activityTypes={[endpointData.type]}
             endpointData={endpointData}
             trainingStrategyInit={trainingStrategyInit}
-            validationStrategyInit={validationStrategyInit}
+            validationStrategiesInit={validationStrategiesInit}
             extraParamsInit={extraParamInit}
             trainingStrategySchema={trainingStrategySchema}
-            validationStrategySchema={validationStrategySchema}
+            validationStrategiesSchema={validationStrategiesSchema}
             extraParamsSchema={extraParamsSchema}
             trainingStrategyFields={QSARTrainingFields}
-            validationStrategyFields={QSARValidationFields}
+            validationStrategiesFields={QSARValidationStrategies}
             extraFields={QSARExtraFields}
             onValuesInit={(values, state) => {
                 if (state.modes) {

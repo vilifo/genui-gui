@@ -103,7 +103,7 @@ function ModelInfo({
     },
   ] : []).concat(extraTrainingParams || []);
 
-  const validationStrategy = model.validationStrategy;
+  const validationStrategy = model.validationStrategies;
   const validationParams = (validationStrategy ? [
     {
       name: "Metrics",

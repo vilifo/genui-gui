@@ -55,7 +55,7 @@ function parseCVData(perfMatrix) {
 }
 
 function CVOverview(props) {
-  const metrics = props.model.validationStrategy.metrics;
+  const metrics = props.model.validationStrategies.metrics;
   const cvPerf = props.getPerfMatrix(props.performance, 'ModelPerformanceCV', metrics);
   const roc_curve_data = props.getPerfValuesForMetric(props.performance, "ROCCurvePoint", metrics.find(metric => metric.name === "ROC"));
   const curves = {};
@@ -105,7 +105,7 @@ function CVOverview(props) {
 }
 
 function IndpendentTestSetOverview(props) {
-  const metrics = props.model.validationStrategy.metrics;
+  const metrics = props.model.validationStrategies.metrics;
   let validSetPerf = props.getPerfMatrix(props.performance, 'ModelPerformance', metrics);
   validSetPerf = Object.keys(validSetPerf).map((x) => validSetPerf[x].length > 0 ? validSetPerf[x][0] : null);
 
@@ -162,7 +162,7 @@ function IndpendentTestSetOverview(props) {
 class QSARPerformanceOverview extends React.Component {
 
   render() {
-    if (!this.props.model.validationStrategy) {
+    if (!this.props.model.validationStrategies) {
       return <p>No performance data for this model is available.</p>
     }
 

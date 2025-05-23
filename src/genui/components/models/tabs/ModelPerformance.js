@@ -2,9 +2,8 @@ import React from "react";
 import { Col, Row} from 'reactstrap';
 import {ComponentWithPagedResources} from "../../../index";
 
-class ModelPerformance extends React.Component {
-
-  getPerfValuesForMetric = (performanceInfo, className, metric) => {
+const ModelPerformance = (props) => {
+  const getPerfValuesForMetric = (performanceInfo, className, metric) => {
     const ret = [];
     performanceInfo.forEach(
       perf => {
@@ -17,51 +16,51 @@ class ModelPerformance extends React.Component {
     return ret;
   };
 
-  getPerfMatrix = (performanceInfo, className, metrics) => {
+  const getPerfMatrix = (performanceInfo, className, metrics) => {
     const ret = {};
     metrics.forEach(
       metric => {
-        ret[metric.name] = this.getPerfValuesForMetric(performanceInfo, className, metric);
+        ret[metric.name] = getPerfValuesForMetric(performanceInfo, className, metric);
       });
     return ret;
   };
 
-  render() {
-    const SummaryComponent = this.props.component;
+  const SummaryComponent = props.component;
 
-    return (<Row>
+  return (
+    <Row>
       <Col sm="12">
         <ComponentWithPagedResources
           definition={{
-            performance: new URL('performance', this.props.modelUrl)
+            performance: new URL('performance', props.modelUrl)
           }}
           updateInterval={2000}
           updateCondition={() => {
-            return this.props.tasks.running.length > 0;
+            return props.tasks.running.length > 0;
           }}
         >
           {
             (data, allLoaded, revision) => {
               if (!SummaryComponent) {
-                return this.props.render(data.performance, allLoaded, revision, this.getPerfMatrix, this.getPerfValuesForMetric)
+                return props.render(data.performance, allLoaded, revision, getPerfMatrix, getPerfValuesForMetric)
               } else {
                 return (
-                    <SummaryComponent
-                        {...this.props}
-                        {...data}
-                        performanceDataComplete={allLoaded}
-                        performanceDataRevision={revision}
-                        getPerfMatrix={this.getPerfMatrix}
-                        getPerfValuesForMetric={this.getPerfValuesForMetric}
-                    />
+                  <SummaryComponent
+                    {...props}
+                    {...data}
+                    performanceDataComplete={allLoaded}
+                    performanceDataRevision={revision}
+                    getPerfMatrix={getPerfMatrix}
+                    getPerfValuesForMetric={getPerfValuesForMetric}
+                  />
                 )
               }
             }
           }
         </ComponentWithPagedResources>
       </Col>
-    </Row>)
-  }
-}
+    </Row>
+  );
+};
 
 export default ModelPerformance;

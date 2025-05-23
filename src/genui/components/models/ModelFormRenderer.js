@@ -8,7 +8,8 @@ class ModelFormRenderer extends React.Component {
     string: Yup.string().required(),
     integer: Yup.number().required(),
     float: Yup.number().required(),
-    bool: Yup.bool().required()
+    bool: Yup.bool().required(),
+    object: Yup.object().required(),
   };
 
   constructor(props) {
@@ -79,12 +80,12 @@ class ModelFormRenderer extends React.Component {
     };
     const trainingStrategyInit = Object.assign(trainingStrategyDefaultInit, this.props.trainingStrategyInit ? this.props.trainingStrategyInit : {});
     // Handle validation strategy initialization
-    let validationStrategyInit;
+    let validationStrategiesInit;
 
-    // Check if validationStrategyInit is provided as an array
-    if (this.props.validationStrategyInit && Array.isArray(this.props.validationStrategyInit)) {
+    // Check if validationStrategiesInit is provided as an array
+    if (this.props.validationStrategiesInit && Array.isArray(this.props.validationStrategiesInit)) {
       // If it's an array, map over each item and merge with default metrics if needed
-      validationStrategyInit = this.props.validationStrategyInit.map(strategy => {
+      validationStrategiesInit = this.props.validationStrategiesInit.map(strategy => {
         const defaultInit = this.state.metrics && !this.disabledModelFormFields.includes('validationStrategy.metrics') ? {
           metrics: this.state.metrics.length > 0 ? [this.state.metrics[0].id] : []
         } : {};
@@ -95,10 +96,10 @@ class ModelFormRenderer extends React.Component {
       const validationStrategyDefaultInit = this.state.metrics && !this.disabledModelFormFields.includes('validationStrategy.metrics') ? {
         metrics: this.state.metrics.length > 0 ? [this.state.metrics[0].id] : []
       } : {};
-      validationStrategyInit = Object.assign({}, validationStrategyDefaultInit, this.props.validationStrategyInit ? this.props.validationStrategyInit : {});
+      validationStrategiesInit = Object.assign({}, validationStrategyDefaultInit, this.props.validationStrategyInit ? this.props.validationStrategyInit : {});
       // Convert to array if it's not empty
-      if (Object.keys(validationStrategyInit).length !== 0) {
-        validationStrategyInit = [validationStrategyInit];
+      if (Object.keys(validationStrategiesInit).length !== 0) {
+        validationStrategiesInit = [validationStrategiesInit];
       }
     }
 
@@ -113,8 +114,8 @@ class ModelFormRenderer extends React.Component {
     }
 
     // validation
-    if (validationStrategyInit && validationStrategyInit.length > 0) {
-      initialValues.validationStrategy = validationStrategyInit;
+    if (validationStrategiesInit && validationStrategiesInit.length > 0) {
+      initialValues.validationStrategies = validationStrategiesInit;
     }
 
     // extra parameters
@@ -151,7 +152,12 @@ class ModelFormRenderer extends React.Component {
       for (const param of this.parameters) {
         parameterValidators[param.name] = this.CTYPE_TO_VALIDATOR[param.contentType]
       }
-      trainingStrategyDefault.parameters = Yup.object().shape(parameterValidators);
+
+      trainingStrategyDefault.parameters = Yup.object().shape({
+        // ...parameterValidators,
+        alg: Yup.string().required,
+        parameters: Yup.object().nullable()
+      });
     }
 
     const trainingStrategy = Object.assign(trainingStrategyDefault, this.props.trainingStrategySchema);
@@ -172,22 +178,22 @@ class ModelFormRenderer extends React.Component {
     }
 
     // validation added only if there is something to add
-    // Check if validationStrategySchema is already an array validator
-    if (this.props.validationStrategySchema && this.props.validationStrategySchema._subType === 'array') {
+    // Check if validationStrategiesSchema is already an array validator
+    if (this.props.validationStrategiesSchema && this.props.validationStrategiesSchema._subType === 'array') {
       // If it's already an array validator, use it directly
-      validationObj.validationStrategy = this.props.validationStrategySchema;
+      validationObj.validationStrategies = this.props.validationStrategiesSchema;
     } else {
       // Otherwise, create a validation schema for a single strategy and wrap it in an array
-      const validationStrategyDefault = this.state.metrics && !this.disabledModelFormFields.includes('validationStrategy.metrics') ? {
+      const validationStrategyDefault = this.state.metrics && !this.disabledModelFormFields.includes('validationStrategies.metrics') ? {
         metrics: Yup.array().of(Yup.number().positive('Metric ID must be a positive integer.')).required('You need to supply at least one metric for validation.'),
       } : {};
 
-      const validationStrategy = Object.assign({}, validationStrategyDefault, this.props.validationStrategySchema || {});
+      const validationStrategies = Object.assign({}, validationStrategyDefault, this.props.validationStrategiesSchema || {});
 
-      if (Object.keys(validationStrategy).length !== 0) {
+      if (Object.keys(validationStrategies).length !== 0) {
         // Create an array validator for validation strategies
         validationObj.validationStrategy = Yup.array().of(
-          Yup.object().shape(validationStrategy)
+          Yup.object().shape(validationStrategies)
         ).min(1, 'At least one validation strategy is required');
       }
     }

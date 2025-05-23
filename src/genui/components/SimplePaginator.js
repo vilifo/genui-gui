@@ -1,58 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { smoothScrollToTop } from '../utils';
 import Pagination from "react-js-pagination";
 
-class SimplePaginator extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      activePage: 1,
-      pageItems: [],
-    };
-  }
+const SimplePaginator = (props) => {
+  const [activePage, setActivePage] = useState(1);
+  const [pageItems, setPageItems] = useState([]);
 
-  componentDidMount() {
-    this.setState({
-      activePage: 1,
-      pageItems: this.props.items.slice(0, this.props.itemsPerPage)
-    })
-  }
+  // Equivalent to componentDidMount and componentDidUpdate
+  useEffect(() => {
+    setActivePage(1);
+    setPageItems(props.items.slice(0, props.itemsPerPage));
+  }, [props.items, props.forceUpdate, props.itemsPerPage]);
 
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    if (this.props.forceUpdate || (this.props.items.length !== prevProps.items.length)) {
-      this.setState({
-        activePage: 1,
-        pageItems: this.props.items.slice(0, this.props.itemsPerPage)
-      })
-    }
-  }
-
-  handlePageChange(pageNumber) {
-    const end = pageNumber * this.props.itemsPerPage;
-    const start = end - this.props.itemsPerPage;
-    const pageItems = this.props.items.slice(start, end <= this.props.items.length ? end : this.props.items.length);
-    this.setState({
-      pageItems: pageItems,
-      activePage: pageNumber
-    });
+  const handlePageChange = (pageNumber) => {
+    const end = pageNumber * props.itemsPerPage;
+    const start = end - props.itemsPerPage;
+    const newPageItems = props.items.slice(start, end <= props.items.length ? end : props.items.length);
+    setPageItems(newPageItems);
+    setActivePage(pageNumber);
     smoothScrollToTop();
-  }
+  };
 
-  render() {
-    return (
-      <div>
-        {this.props.children(this.state.pageItems)}
-        <Pagination
-            activePage={this.state.activePage}
-            totalItemsCount={this.props.items.length}
-            pageRangeDisplayed={5}
-            onChange={this.handlePageChange.bind(this)}
-            itemClass="page-item"
-            linkClass="page-link"
-        />
-      </div>
-    );
-  }
-}
+  return (
+    <div>
+      {props.children(pageItems)}
+      <Pagination
+        activePage={activePage}
+        totalItemsCount={props.items.length}
+        pageRangeDisplayed={5}
+        onChange={handlePageChange}
+        itemClass="page-item"
+        linkClass="page-link"
+      />
+    </div>
+  );
+};
 
 export default SimplePaginator;

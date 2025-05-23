@@ -1,37 +1,30 @@
-import React, { Component } from 'react';
+import React, { useState } from 'react';
 
 const PageAlertContext = React.createContext();
 
-export class PageAlertProvider extends Component {
-  constructor() {
-    super();
-    this.state = {
-      alert: null,
-    };
-  }
+export const PageAlertProvider = ({ children }) => {
+  const [alert, setAlertState] = useState(null);
 
-  setAlert = (message, type) => {
-    const NewAlert = { message, type };
-    this.setState({ alert: NewAlert });
+  const setAlert = (message, type) => {
+    const newAlert = { message, type };
+    setAlertState(newAlert);
   };
 
-  closeAlert = () => {
-    this.setState({ alert: null });
+  const closeAlert = () => {
+    setAlertState(null);
   };
 
-  render() {
-    return (
-      <PageAlertContext.Provider
-        value={{
-          alert: this.state.alert,
-          closeAlert: this.closeAlert,
-          setAlert: this.setAlert,
-        }}
-      >
-        {this.props.children}
-      </PageAlertContext.Provider>
-    );
-  }
-}
+  return (
+    <PageAlertContext.Provider
+      value={{
+        alert,
+        closeAlert,
+        setAlert,
+      }}
+    >
+      {children}
+    </PageAlertContext.Provider>
+  );
+};
 
 export default PageAlertContext;

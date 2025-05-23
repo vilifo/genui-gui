@@ -127,9 +127,9 @@ export class DrugExNetCreateCard extends React.Component {
       return <InfoCard title="No Compound Sets" text="You need to create a compound set before training a DrugEx network."/>
     }
 
-    const validationStrategyInit = {
+    const validationStrategiesInit = [{
       validSetSize: 512,
-    };
+    }];
     const trainingStrategyInit = {
       inputType: this.props.drexnetInputTypes[0].value,
       modelClass: this.props.drexnetAlgorithms[0].value
@@ -139,9 +139,12 @@ export class DrugExNetCreateCard extends React.Component {
       molset: molsets[0].id,
     };
 
-    const validationStrategySchema = {
-      validSetSize: Yup.number().integer().min(0, 'Validation set size must be positive or zero.'),
-    };
+    const validationStrategiesSchema = Yup.array.of(
+        Yup.object().shape({
+          validSetSize: Yup.number().integer().min(0, 'Validation set size must be positive or zero.'),
+          dataSplit: Yup.object(),
+          metrics: Yup.array().of(Yup.number().positive('Metric ID must be a positive integer.'))
+    }));
     const trainingStrategySchema = {
       inputType: Yup.string().required("You have to specify input type."),
       modelClass: Yup.string().required("You have to specify model class.")
@@ -155,10 +158,10 @@ export class DrugExNetCreateCard extends React.Component {
       <ModelCardNew
         {...this.props}
         molsets={molsets}
-        validationStrategyInit={validationStrategyInit}
+        validationStrategyInit={validationStrategiesInit}
         trainingStrategyInit={trainingStrategyInit}
         extraParamsInit={extraParamInit}
-        validationStrategySchema={validationStrategySchema}
+        validationStrategiesSchema={validationStrategiesSchema}
         trainingStrategySchema={trainingStrategySchema}
         extraParamsSchema={extraParamsSchema}
         validationStrategyFields={DrugExNetValidationFields}
@@ -246,7 +249,7 @@ function DrugExAgentCreateCardRenderer(props) {
   const validationStrategyInit = {
     validSetSize: 512,
   };
-  const validationStrategySchema = {
+  const validationStrategiesSchema = {
     validSetSize: Yup.number().integer().min(0, 'Validation set size must be positive or zero.'),
   };
 
@@ -271,12 +274,12 @@ function DrugExAgentCreateCardRenderer(props) {
       trainingStrategySchema={trainingStrategySchema}
       trainingStrategyFields={DrugExAgentTrainingFields}
       validationStrategyInit={validationStrategyInit}
-      validationStrategySchema={validationStrategySchema}
-      validationStrategyFields={DrugExAgentValidationFields}
+      validationStrategiesSchema={validationStrategiesSchema}
+      validationStrategiesFields={DrugExAgentValidationFields}
       extraParamsInit={extraParamInit}
       extraParamsSchema={extraParamsSchema}
       extraFields={DrugExAgentExtraFields}
-      disabledModelFormFields={['validationStrategy.metrics', 'trainingStrategy.mode']}
+      disabledModelFormFields={['validationStrategy', 'trainingStrategy.mode']}
     />
   )
 }

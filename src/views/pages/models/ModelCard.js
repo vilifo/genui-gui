@@ -52,16 +52,16 @@ class QSARModelCard extends React.Component {
       })
     }
 
-    const validationStrategy = model.validationStrategy;
+    const validationStrategies = model.validationStrategies;
     const validationParams = [];
-    if (validationStrategy) {
+    if (validationStrategies) {
       validationParams.push({
         name : "CV-folds",
-        value : validationStrategy.cvFolds
+        value : validationStrategies.cvFolds
       });
       validationParams.push({
           name : "Validation Set Size",
-          value : validationStrategy.validSetSize
+          value : validationStrategies.validSetSize
       });
     }
 

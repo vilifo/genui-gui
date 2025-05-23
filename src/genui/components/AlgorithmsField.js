@@ -1,37 +1,18 @@
 import React from 'react';
-import {Button, Col, FormGroup, Input, Label} from 'reactstrap';
+import {Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
 import FieldErrorMessage from './forms/FieldErrorMessage';
 
 export function AlgorithmsField(props) {
-    const algorithmPrefix = props.algorithmPrefix;
-    const currentIndex = algorithmPrefix ? parseInt(algorithmPrefix.split('[')[1].split(']')[0]) : null;
+    const algorithmPrefix = "trainingStrategy.parameters";
+    const currentMode = props.modes[0].name || null;
     const [loading, setLoading] = React.useState(false);
     const [allAlgorithms, setAllAlgorithms] = React.useState(props.allAlgorithms || []);
     const [loadingAlgorithms, setLoadingAlgorithms] = React.useState(false);
     const {values, setFieldValue} = props.formikProps || {};
     const fetchedRef = React.useRef({});
-    console.log(props);
 
-    const addAlgorithm = () => {
-        if (values && setFieldValue) {
-            const currentAlgorithms = values.trainingStrategy.embeddings || [];
-            setFieldValue('trainingStrategy.embeddings', [
-                ...currentAlgorithms,
-                {name: allAlgorithms, arguments: {}}
-            ]);
-        }
-    };
-
-    const removeAlgorithm = (index) => {
-        if (values && setFieldValue) {
-            const currentAlgorithm = [...(values.trainingStrategy.embeddings || [])];
-            currentAlgorithm.splice(index, 1);
-            setFieldValue('trainingStrategy.embeddings', currentAlgorithm);
-        }
-    };
-
-    // Fetch available embeddings when component mounts
+    // Fetch available algorithms when component mounts
     const fetchAlgorithms = React.useCallback(async () => {
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
             console.error("API URLs not provided");
@@ -44,25 +25,24 @@ export function AlgorithmsField(props) {
 
         setLoadingAlgorithms(true);
         try {
-            const url = new URL(`models/qsprpred/sklearn/mode/${props.modes.name}/`, props.apiUrls.qsarRoot);
+            const url = new URL(`models/qsprpred/sklearn/mode/${currentMode}/`, props.apiUrls.qsarRoot);
             const response = await fetch(url.toString(), {
                 credentials: "include",
             });
-
             if (!response.ok) {
-                throw new Error(`Failed to fetch embeddings: ${response.statusText}`);
+                throw new Error(`Failed to fetch algorithms: ${response.statusText}`);
             }
 
             const data = await response.json();
             setAllAlgorithms(data);
         } catch (error) {
-            console.error("Error fetching embeddings:", error);
+            console.error("Error fetching algorithms:", error);
         } finally {
             setLoadingAlgorithms(false);
         }
-    }, [props.apiUrls, allAlgorithms.length, setAllAlgorithms, props.modes.name]);
+    }, [props.apiUrls, allAlgorithms.length, setAllAlgorithms, currentMode]);
 
-    // Fetch embedding arguments when an embedding is selected and set their values
+    // Fetch algorithm parameters when an algorithm is selected and set their values
     const fetchAlgorithmParameters = React.useCallback(async (alg_name) => {
         if (!alg_name) return;
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
@@ -76,249 +56,161 @@ export function AlgorithmsField(props) {
 
         setLoading(true);
         try {
-            const url = new URL(`models/qsprpred/sklearn/${alg_name}/arguments`, props.apiUrls.qsarRoot);
+            const url = new URL(`models/qsprpred/sklearn/${alg_name}/params`, props.apiUrls.qsarRoot);
             const response = await fetch(url.toString(), {
                 credentials: "include",
             });
 
             if (!response.ok) {
-                throw new Error(`Failed to fetch embedding arguments: ${response.statusText}`);
+                throw new Error(`Failed to fetch algorithm parameters: ${response.statusText}`);
             }
 
             const data = await response.json();
             fetchedRef.current[alg_name] = true;
 
             if (values && setFieldValue) {
-                const currentEmbeddings = values.trainingStrategy.embeddings || [];
-                const index = currentIndex;
-                if (index !== null && index >= 0 && index < currentEmbeddings.length) {
-                    const processedData = {};
-                    Object.entries(data).forEach(([key, value]) => {
-                        if (Array.isArray(value)) {
-                            const array_data = {};
-                            Object.entries(value).forEach(([subkey, subvalue]) => {
-                                array_data[subvalue] = false;
-                            });
-                            processedData[key] = array_data;
-                        } else {
-                            processedData[key] = value;
+                const updatedParameters = {
+                    alg: alg_name,
+                    parameters: Object.fromEntries(Object.entries(data).map(([paramName, paramValue]) => [
+                        paramName, {
+                            value: paramValue.default,
+                            constraints: paramValue.constraints,
                         }
-                    });
-
-                    const updatedEmbedding = {
-                        ...currentEmbeddings[index],
-                        arguments: processedData
-                    };
-                    const updatedEmbeddings = [...currentEmbeddings];
-                    updatedEmbeddings[index] = updatedEmbedding;
-                    setFieldValue('trainingStrategy.embeddings', updatedEmbeddings);
-                }
+                    ]))
+                };
+                setFieldValue('trainingStrategy.parameters', updatedParameters);
             }
+
         } catch (error) {
-            console.error("Error fetching embedding arguments:", error);
+            console.error("Error fetching algorithm parameters:", error);
         } finally {
             setLoading(false);
         }
-    }, [props.apiUrls, values, setFieldValue, currentIndex]);
+    }, [props.apiUrls, values, setFieldValue]);
 
-    const handleEmbeddingChange = (event) => {
-        const selectedEmbeddingId = event.target.value;
+    const handleAlgorithmChange = (event) => {
+        const selectedAlgorithmId = event.target.value;
 
         if (values && setFieldValue) {
-            const currentEmbeddings = values.trainingStrategy.embeddings || [];
-            const index = currentIndex;
-            if (index !== null && index >= 0 && index < currentEmbeddings.length) {
-                const updatedEmbedding = {name: selectedEmbeddingId, arguments: {}};
-                const updatedEmbeddings = [...currentEmbeddings];
-                updatedEmbeddings[index] = updatedEmbedding;
-                setFieldValue('trainingStrategy.embeddings', updatedEmbeddings);
-            }
+            const updatedAlgorithm = {alg: selectedAlgorithmId, parameters: {}};
+            setFieldValue('trainingStrategy.parameters', updatedAlgorithm);
         }
 
-        if (selectedEmbeddingId) {
-            fetchedRef.current[selectedEmbeddingId] = false;
+        if (selectedAlgorithmId) {
+            fetchedRef.current[selectedAlgorithmId] = false;
         }
 
-        fetchAlgorithmParameters(selectedEmbeddingId);
-    };
-
-    const handleListItemChange = (paramName, itemName, checked) => {
-        if (!values || !setFieldValue) return;
-
-        const currentEmbeddings = values.trainingStrategy.embeddings || [];
-        const index = currentIndex;
-        if (index === null || index < 0 || index >= currentEmbeddings.length) return;
-
-        const currentEmbedding = currentEmbeddings[index];
-        const currentArguments = currentEmbedding.arguments || {};
-        const currentItem = currentArguments[paramName] || {};
-
-        const updatedItem = {
-            ...currentItem,
-            [itemName]: checked
-        }
-
-        const updatedArguments = {
-            ...currentArguments,
-            [paramName]: updatedItem
-        };
-
-        const updatedEmbedding = {
-            ...currentEmbedding,
-            arguments: updatedArguments
-        };
-
-        const updatedEmbeddings = [...currentEmbeddings];
-        updatedEmbeddings[index] = updatedEmbedding;
-
-        setFieldValue('trainingStrategy.embeddings', updatedEmbeddings);
+        fetchAlgorithmParameters(selectedAlgorithmId);
     };
 
     const renderParamInput = (paramName, paramValue) => {
-        if (paramValue && typeof paramValue === "object") {
-            return (
-                <div className="mt-2">
-                    {Object.entries(paramValue).map(([key, value]) => (
-                        <div key={key} className="form-check" style={{margin: '5px'}}>
-                            <input
-                                type="checkbox"
-                                className="form-check-input"
-                                id={`${algorithmPrefix}-${paramName}-${key}`}
-                                value={key}
-                                checked={value}
-                                onChange={(e) => {
-                                    handleListItemChange(paramName, key, e.target.checked);
-                                }}
-                            />
-                            <label className="form-check-label" htmlFor={`${algorithmPrefix}-${paramName}-${key}`}>
-                                {key}
-                            </label>
-                        </div>
-                    ))}
-                </div>
-            );
-        } else {
+        const constraints = paramValue && paramValue.constraints ? paramValue.constraints : null;
+        const type = constraints ? Object.entries(constraints)[0] : null;
+        const value = paramValue && paramValue.value ? paramValue.value : null;
+        if (paramValue && (type === "int" || type === "float")) {
             return (
                 <div>
                     <Label>{paramName}</Label>
                     <Col sm={8}>
-                        <Field name={`${algorithmPrefix}.arguments.${paramName}`} as={Input} type="number"/>
+                        <Field name={`${algorithmPrefix}.parameters.parameters.${paramName}.value`} as={Input}
+                               type="number"/>
                     </Col>
                 </div>
             );
+        } else if (paramValue && type === "bool") {
+            return (
+                <div key={paramName} className="form-check" style={{margin: '5px'}}>
+                    <input
+                        type="checkbox"
+                        className="form-check-input"
+                        id={`${algorithmPrefix}-parameters-${paramName}`}
+                        value={paramName}
+                        checked={value}
+                        onChange={(e) => {
+                            setFieldValue(`${algorithmPrefix}.parameters.parameters.${paramName}.value`, e.target.checked);
+                        }}
+                    />
+                    <label className="form-check-label" htmlFor={`${algorithmPrefix}-parameters-${paramName}`}>
+                        {paramName}
+                    </label>
+                </div>
+            );
+        } else if (paramValue && type === "str") {
+            const choices = constraints.str || [];
+            return (
+                <div>
+                    <Label>{paramName}</Label>
+                    <Field
+                        name={`${algorithmPrefix}-parameters-${paramName}`}
+                        as={Input}
+                        type="select"
+                        onChange={(e) => {
+                            setFieldValue(`${algorithmPrefix}.parameters.parameters.${paramName}.value`, e.target.checked);
+                        }}>
+                        {choices.map((choice) => (<option key={`${algorithmPrefix}-parameters-${paramName}-${choice}`}
+                                                          value={choice}>{choice}</option>))}
+                    </Field>
+                </div>
+            );
+
         }
     };
 
-    const currentEmbeddingId = values && values.trainingStrategy && values.trainingStrategy.embeddings && currentIndex !== null
-        ? values.trainingStrategy.embeddings[currentIndex].name
+    const currentAlgorithmId = values && values.trainingStrategy && values.trainingStrategy.parameters
+        ? values.trainingStrategy.parameters.alg
         : null;
-
-    const currentEmbeddings = values.trainingStrategy.embeddings || [];
-    const availableEmbeddings = [...allAlgorithms.filter(embedding => !currentEmbeddings.some(current => current.name === embedding)),
-        currentEmbeddingId];
-
 
     React.useEffect(() => {
         fetchAlgorithms();
     }, [fetchAlgorithms]);
 
     React.useEffect(() => {
-        if (currentEmbeddingId) {
-            fetchAlgorithmParameters(currentEmbeddingId);
+        if (currentAlgorithmId) {
+            fetchAlgorithmParameters(currentAlgorithmId);
         }
-    }, [currentEmbeddingId, fetchAlgorithmParameters]);
-
-    if (algorithmPrefix && algorithmPrefix.includes('[')) {
-        return (
-            <React.Fragment>
-                <FormGroup>
-                    <Field
-                        name={`${algorithmPrefix}.name`}
-                        as={Input}
-                        type="select"
-                        onChange={handleEmbeddingChange}
-                        disabled={loadingAlgorithms}
-                    >
-                        {loadingAlgorithms ? (
-                            <option value="" disabled>Loading embeddings...</option>
-                        ) : (
-                            availableEmbeddings.map((desc) => (
-                                <option key={desc} value={desc}>{desc}</option>
-                            ))
-                        )}
-                    </Field>
-                </FormGroup>
-                <FieldErrorMessage name={`${algorithmPrefix}.name`}/>
-
-                {/* Display embedding arguments if available */}
-                {loading ? (
-                    <p>Loading arguments...</p>
-                ) : values && values.trainingStrategy && values.trainingStrategy.embeddings && currentIndex !== null ? (
-                    <div className="mt-3">
-                        <h5>Arguments</h5>
-                        <div style={{maxHeight: '250px', overflowY: 'auto'}}>
-                            {values.trainingStrategy.embeddings[currentIndex].arguments &&
-                                Object.entries(values.trainingStrategy.embeddings[currentIndex].arguments).map(([paramName, paramValue]) => (
-                                    <div key={paramName} className="mb-3">
-                                        {renderParamInput(paramName, paramValue)}
-                                    </div>
-                                ))}
-                        </div>
-                    </div>
-                ) : (
-                    values && values.trainingStrategy && values.trainingStrategy.embeddings &&
-                    currentIndex !== null && values.trainingStrategy.embeddings[currentIndex].name &&
-                    <p>No arguments available for this embedding.</p>
-                )}
-            </React.Fragment>
-        )
-    }
+    }, [currentAlgorithmId, fetchAlgorithmParameters]);
 
     return (
         <React.Fragment>
-            <div className="row">
-                {values && values.trainingStrategy.embeddings && values.trainingStrategy.embeddings.map((embedding, index) => (
-                    <div key={index} className="col-md-4 mb-4">
-                        <div
-                            className="p-3 border rounded"
-                            style={{
-                                backgroundColor: `hsl(${index * 137.5}, 70%, 85%)`
-                            }}
-                        >
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                                <h5 className="mb-0">Embedding {index + 1}</h5>
-                                {values.trainingStrategy.embeddings.length > 1 && (
-                                    <Button color="danger" size="sm" onClick={() => removeAlgorithm(index)}>
-                                        Remove
-                                    </Button>
-                                )}
-                            </div>
-                            <AlgorithmsField
-                                {...props}
-                                algorithmPrefix={`trainingStrategy.algorithm[${index}]`}
-                                formikProps={props.formikProps}
-                                allAlgorithms={allAlgorithms}
-                            />
-                        </div>
+            <FormGroup>
+                <Field
+                    name={`${algorithmPrefix}.alg`}
+                    as={Input}
+                    type="select"
+                    onChange={handleAlgorithmChange}
+                    disabled={loadingAlgorithms}
+                >
+                    {loadingAlgorithms ? (
+                        <option value="" disabled>Loading algorithms...</option>
+                    ) : (
+                        allAlgorithms.map((alg) => (
+                            <option key={alg} value={alg}>{alg}</option>
+                        ))
+                    )}
+                </Field>
+            </FormGroup>
+            <FieldErrorMessage name={`${algorithmPrefix}.alg`}/>
+
+            {/* Display algorithm parameters if available */}
+            {loading ? (
+                <p>Loading parameters...</p>
+            ) : values && values.trainingStrategy && values.trainingStrategy.parameters ? (
+                <div className="mt-3">
+                    <h5>Parameters</h5>
+                    <div style={{maxHeight: '250px', overflowY: 'auto'}}>
+                        {values.trainingStrategy.parameters.parameters &&
+                            Object.entries(values.trainingStrategy.parameters.parameters).map(([paramName, paramValue]) => (
+                                <div key={paramName} className="mb-3">
+                                    {renderParamInput(paramName, paramValue)}
+                                </div>
+                            ))}
                     </div>
-                ))}
-            </div>
-            <Button color="primary" onClick={addAlgorithm} className="mt-2">
-                Add Embedding
-            </Button>
+                </div>
+            ) : (
+                values && values.trainingStrategy && values.trainingStrategy.parameters &&
+                values.trainingStrategy.parameters.alg &&
+                <p>No parameters available for this algorithm.</p>
+            )}
         </React.Fragment>
     );
 }
-// {/*{*/}
-// {/*  parameters.map(param => {*/}
-// {/*    const name = `${trainingStrategyPrefix}.parameters.${param.name}`;*/}
-// {/*    return (*/}
-// {/*      <FormGroup key={name} row>*/}
-// {/*        <Label htmlFor={name} sm={4}>{param.name}</Label>*/}
-// {/*        <Col sm={8}>*/}
-// {/*          <ParameterField parameter={param} name={name}/>*/}
-// {/*          <FieldErrorMessage name={name}/>*/}
-// {/*        </Col>*/}
-// {/*      </FormGroup>*/}
-// {/*    )})*/}
-// {/*}*/}

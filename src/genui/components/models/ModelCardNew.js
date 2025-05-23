@@ -111,10 +111,10 @@ const ModelCardNew = (props) => {
         <ModelFormRenderer
           {...props} // all these props will be passed down to the component
           chosenAlgorithm={algorithm}
-          component={props => <ModelFormCardBody {...props} form={props.form ? props.form : FormikModelForm}/>} // this is what should draw the formik form and pass the renderer props to it
-          handleCreate={newModelFromFormData} // this is the method used to process the parsed data from the form
-          project={props.currentProject} // this is required
-          formNameSuffix="create" // this is required
+          component={props => <ModelFormCardBody {...props} form={props.form ? props.form : FormikModelForm}/>}
+          handleCreate={newModelFromFormData}
+          project={props.currentProject}
+          formNameSuffix="create"
         />
       </React.Fragment>
     ) : (

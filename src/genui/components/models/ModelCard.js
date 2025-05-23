@@ -1,43 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, CardBody, CardFooter, CardHeader } from 'reactstrap';
 import {ProjectItemSubTitle, TabWidget} from '../../index';
 
-class ModelCard extends React.Component {
+const ModelCard = (props) => {
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  constructor(props) {
-    super(props);
+  const { model, listURL, taskInfo, tasks, apiUrls, modelClass, onModelDelete, tabs } = props;
+  const modelUrl = new URL(`${model.id}/`, listURL);
 
-    this.state = {
-      isDeleting : false
-    }
-  }
+  return (
+    <React.Fragment>
+      <CardHeader>{model.name}</CardHeader>
 
-  render() {
-    const model = this.props.model;
-    const modelUrl = new URL(`${model.id}/`, this.props.listURL);
+      <CardBody className="scrollable">
+        <ProjectItemSubTitle
+          tasks={taskInfo.tasksExist ? tasks : null}
+          progressURL={apiUrls.celeryProgress}
+          item={model}
+        />
+        <TabWidget {...props} modelUrl={modelUrl} tabs={tabs}/>
+      </CardBody>
 
-    return (
-      <React.Fragment>
-        <CardHeader>{model.name}</CardHeader>
-
-        <CardBody className="scrollable">
-          <ProjectItemSubTitle
-            tasks={this.props.taskInfo.tasksExist ? this.props.tasks : null}
-            progressURL={this.props.apiUrls.celeryProgress}
-            item={model}
-          />
-          <TabWidget {...this.props} modelUrl={modelUrl} tabs={this.props.tabs}/>
-        </CardBody>
-
-        <CardFooter>
-          <Button color="danger" disabled={this.state.isDeleting} onClick={() => {
-            this.setState({ isDeleting: true });
-            this.props.onModelDelete(this.props.modelClass, model)
-          }}>Delete</Button>
-        </CardFooter>
-      </React.Fragment>
-    )
-  }
-}
+      <CardFooter>
+        <Button color="danger" disabled={isDeleting} onClick={() => {
+          setIsDeleting(true);
+          onModelDelete(modelClass, model);
+        }}>Delete</Button>
+      </CardFooter>
+    </React.Fragment>
+  );
+};
 
 export default ModelCard;

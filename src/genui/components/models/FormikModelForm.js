@@ -3,26 +3,26 @@ import { Field, Formik } from 'formik';
 import { Form, FormGroup, FormText, Input, Label } from 'reactstrap';
 import { FieldErrorMessage, FileUpload } from '../../index';
 
-class ParameterField extends React.Component {
-  CTYPE_TO_COMPONENT = {
-    string: name => <Field name={name} as={Input} type="text"/>,
-    integer: name => <Field name={name} as={Input} type="number"/>,
-    float: name => <Field name={name} as={Input} type="number" step="0.01"/>,
-    bool: name => <Field name={name} as={Input} type="checkbox"/>
-  };
-
-  render() {
-    return this.CTYPE_TO_COMPONENT[this.props.parameter.contentType](this.props.name)
-  }
-}
+// class ParameterField extends React.Component {
+//   CTYPE_TO_COMPONENT = {
+//     string: name => <Field name={name} as={Input} type="text"/>,
+//     integer: name => <Field name={name} as={Input} type="number"/>,
+//     float: name => <Field name={name} as={Input} type="number" step="0.01"/>,
+//     bool: name => <Field name={name} as={Input} type="checkbox"/>
+//   };
+//
+//   render() {
+//     return this.CTYPE_TO_COMPONENT[this.props.parameter.contentType](this.props.name)
+//   }
+// }
 
 function FormikModelForm (props) {
-  const validationStrategyPrefix = "validationStrategy";
+  const validationStrategiesPrefix = "validationStrategies";
   const trainingStrategyPrefix = "trainingStrategy";
   const modes = props.modes;
 
   const TrainingStrategyExtras = props.trainingStrategyFields;
-  const ValidationStrategyExtras = props.validationStrategyFields;
+  const validationStrategiesFields = props.validationStrategiesFields;
   const ExtraFields = props.extraFields;
 
   const disabled = props.disabledModelFormFields ? props.disabledModelFormFields : [];
@@ -111,19 +111,18 @@ function FormikModelForm (props) {
               ) : null
             }
 
-            {formik.initialValues.hasOwnProperty(validationStrategyPrefix) ?
+            {formik.initialValues.hasOwnProperty(validationStrategiesPrefix) ?
               <React.Fragment>
                 {
-                  ValidationStrategyExtras || !disabled.includes(`${validationStrategyPrefix}.metrics`) ? <h4>Validation Parameters</h4> : null
+                  validationStrategiesFields || !disabled.includes(`${validationStrategiesPrefix}.metrics`) ? <h4>Validation Parameters</h4> : null
                 }
-
                 {
-                  ValidationStrategyExtras ?
-                  <ValidationStrategyExtras
-                    {...props}
-                    validationStrategyPrefix={validationStrategyPrefix}
-                    formikProps={formik}
-                  /> : null
+                  validationStrategiesFields ?
+                  React.createElement(validationStrategiesFields, {
+                    ...props,
+                    validationStrategyPrefix: validationStrategiesPrefix,
+                    formikProps: formik
+                  }) : null
                 }
               </React.Fragment>
               : null

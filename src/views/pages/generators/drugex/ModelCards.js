@@ -7,7 +7,7 @@ export class DrugExNetCard extends React.Component {
   render() {
     const model =  this.props.model;
     // const trainingStrategy = model.trainingStrategy;
-    const validationStrategy = model.validationStrategy;
+    const validationStrategy = model.validationStrategies;
 
     const trainingParams = [
       {
