@@ -1,9 +1,8 @@
 import React from "react";
 import {Responsive, WidthProvider} from "react-grid-layout";
 
-class ResponsiveGrid extends React.Component {
-
-    getLayout = (items, cols, config) => {
+const ResponsiveGrid = (props) => {
+    const getLayout = (items, cols, config) => {
         let row_id = 0;
         let col_id = 0;
         return items.map(item => {
@@ -28,36 +27,34 @@ class ResponsiveGrid extends React.Component {
         });
     };
 
+    const items = props.items;
+    const mdCols = (props.mdCols === undefined) ? 2 : props.mdCols;
+    const smCols = (props.smCols === undefined) ? 1 : props.smCols;
+    const mdBreak = (props.mdBreak === undefined) ? 992 : props.mdBreak;
+    const smBreak = (props.smBreak === undefined) ? 480 : props.smBreak;
 
-    render() {
-        const items = this.props.items;
-        const mdCols = (this.props.mdCols === undefined) ? 2 : this.props.mdCols;
-        const smCols = (this.props.smCols === undefined) ? 1 : this.props.smCols;
-        const mdBreak = (this.props.mdBreak === undefined) ? 992 : this.props.mdBreak;
-        const smBreak = (this.props.smBreak === undefined) ? 480 : this.props.smBreak;
+    const layouts = {
+        md: getLayout(items, mdCols, "md")
+        , sm: getLayout(items, smCols, "sm")
+    };
+    const ResponsiveGridLayout = WidthProvider(Responsive);
+    // console.log(layouts);
 
-        const layouts = {
-            md: this.getLayout(items, mdCols, "md")
-            , sm: this.getLayout(items, smCols, "sm")
-        };
-        const ResponsiveGridLayout = WidthProvider(Responsive);
-        // console.log(layouts);
-        return (
-            <ResponsiveGridLayout
-                className={this.props.gridID}
-                id={this.props.gridID}
-                layouts={layouts}
-                breakpoints={{md: mdBreak, sm: smBreak}}
-                cols={{md: mdCols, sm: smCols}}
-                rowHeight={this.props.rowHeight}
-                autoSize={true}
-                verticalCompact={true}
-                draggableCancel='.unDraggable'
-            >
-                {this.props.children}
-            </ResponsiveGridLayout>
-        )
-    }
-}
+    return (
+        <ResponsiveGridLayout
+            className={props.gridID}
+            id={props.gridID}
+            layouts={layouts}
+            breakpoints={{md: mdBreak, sm: smBreak}}
+            cols={{md: mdCols, sm: smCols}}
+            rowHeight={props.rowHeight}
+            autoSize={true}
+            verticalCompact={true}
+            draggableCancel='.unDraggable'
+        >
+            {props.children}
+        </ResponsiveGridLayout>
+    );
+};
 
 export default ResponsiveGrid;

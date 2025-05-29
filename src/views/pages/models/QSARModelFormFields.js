@@ -104,11 +104,12 @@ export function QSARTrainingFields(props) {
 
 export function QSARValidationStrategies(props) {
     const validationStrategyPrefix = props.validationStrategyPrefix;
-    const currentIndex = validationStrategyPrefix?.match(/\[(\d+)\]/)?.at(1) ? parseInt(validationStrategyPrefix.match(/\[(\d+)\]/)[1]) : null;
+    const currentIndex = validationStrategyPrefix?.match(/\[(\d+)]/)?.at(1) ? parseInt(validationStrategyPrefix.match(/\[(\d+)]/)[1]) : null;
     const [loading, setLoading] = React.useState(false);
     const fetchedRef = React.useRef({});
     const [loadingDataSplits, setLoadingDataSplits] = React.useState(false);
     const [allDataSplits, setAllDataSplits] = React.useState(props.allDataSplits || []);
+    const [dataSplitParameters, setDataSplitParameters] = React.useState([]);
     const {values, setFieldValue} = props.formikProps || {};
     const metrics = props.metrics;
 
@@ -184,16 +185,17 @@ export function QSARValidationStrategies(props) {
             }
 
             const data = await response.json();
+            setDataSplitParameters({name: dataSplitName, ...data});
             fetchedRef.current[dataSplitName] = true;
 
             if (values && setFieldValue) {
                 const currentValidationStrategies = values.validationStrategies || [];
                 const index = currentIndex;
                 if (index !== null && index >= 0 && index < currentValidationStrategies.length) {
-                    const updatedDataSplit = {
-                        name: dataSplitName,
-                        ...data
-                    };
+                    const updatedDataSplit = {name: dataSplitName};
+                    Object.entries(data).forEach(([paramName, paramValue]) => (
+                        updatedDataSplit[paramName] = paramValue.value
+                    ));
                     const updatedValidationStrategies = [...currentValidationStrategies];
                     updatedValidationStrategies[index] = {
                         ...updatedValidationStrategies[index],
@@ -234,6 +236,7 @@ export function QSARValidationStrategies(props) {
     };
 
     const renderParamInput = (paramName, paramValue) => {
+        const type = dataSplitParameters[paramName] ? dataSplitParameters[paramName].type : null;
         if (paramName === "name") {
             return null;
         } else if (paramName === "scaffold") {
@@ -245,13 +248,16 @@ export function QSARValidationStrategies(props) {
                     </Col>
                 </FormGroup>
             );
-        } else {
+        } else if (type === "int" || type === "float") {
             return (
                 <FormGroup row>
                     <Label htmlFor={`${validationStrategyPrefix}.${paramName}`} sm={4}>{paramName}</Label>
                     <Col sm={8}>
-                        <Field name={`${validationStrategyPrefix}.${paramName}`} as={Input} type="number"
-                               value={paramValue}/>
+                        <Field name={`${validationStrategyPrefix}.dataSplit.${paramName}`}
+                               as={Input}
+                               type="number"
+                               value={paramValue}
+                        />
                     </Col>
                 </FormGroup>
             );
@@ -302,7 +308,7 @@ export function QSARValidationStrategies(props) {
                 ) : values && values.validationStrategies && currentIndex !== null ? (
                     <div className="mt-3">
                         <h5>Parameters</h5>
-                        <div style={{maxHeight: '250px', overflowY: 'auto'}}>
+                        <div className='p-3 border rounded' style={{maxHeight: '250px', overflowY: 'auto'}}>
                             {values.validationStrategies[currentIndex].dataSplit &&
                                 Object.entries(values.validationStrategies[currentIndex].dataSplit).map(([paramName, paramValue]) => (
                                     <div key={paramName} className="mb-3">
@@ -318,7 +324,10 @@ export function QSARValidationStrategies(props) {
                 <FormGroup row>
                     <Label htmlFor={`${validationStrategyPrefix}.cvFolds`} sm={4}>Cross-Validation Folds</Label>
                     <Col sm={8}>
-                        <Field name={`${validationStrategyPrefix}.cvFolds`} as={Input} type="number"/>
+                        <Field name={`${validationStrategyPrefix}.cvFolds`}
+                               as={Input}
+                               value={values.validationStrategies[currentIndex]?.cvFolds || 3}
+                               type="number"/>
                     </Col>
                 </FormGroup>
                 <FieldErrorMessage name={`${validationStrategyPrefix}.cvFolds`}/>
@@ -363,6 +372,7 @@ export function QSARValidationStrategies(props) {
                         {...props}
                         validationStrategyPrefix={`validationStrategy[${index}]`}
                         formikProps={props.formikProps}
+                        allDataSplits={allDataSplits}
                     />
                     </div>
                 </div>

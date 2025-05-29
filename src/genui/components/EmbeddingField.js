@@ -3,13 +3,26 @@ import {Button, Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
 import FieldErrorMessage from './forms/FieldErrorMessage';
 
-// Module-level cache for embeddings and arguments
 const embeddingsCache = {
     list: null,
     arguments: {},
     fetchingList: false,
     fetchingArguments: {}
 };
+
+try {
+    const storedList = localStorage.getItem('embeddingsCache_list');
+    if (storedList) {
+        embeddingsCache.list = JSON.parse(storedList);
+    }
+
+    const storedArguments = localStorage.getItem('embeddingsCache_arguments');
+    if (storedArguments) {
+        embeddingsCache.arguments = JSON.parse(storedArguments);
+    }
+} catch (error) {
+    console.error("Error reading from localStorage:", error);
+}
 
 export function EmbeddingsField(props) {
     const embeddingPrefix = props.embeddingPrefix;
@@ -42,25 +55,21 @@ export function EmbeddingsField(props) {
         }
     };
 
-    // Fetch available embeddings when component mounts
     const fetchEmbeddings = React.useCallback(async () => {
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
             console.error("API URLs not provided");
             return;
         }
 
-        // If we already have embeddings in the component state, use those
         if (allEmbeddings.length > 0) {
             return;
         }
 
-        // If we have embeddings in the cache, use those
         if (embeddingsCache.list) {
             setAllEmbeddings(embeddingsCache.list);
             return;
         }
 
-        // If another component is already fetching, wait for that to complete
         if (embeddingsCache.fetchingList) {
             setLoadingEmbeddings(true);
             const checkCache = () => {
@@ -76,7 +85,6 @@ export function EmbeddingsField(props) {
                 return false;
             };
 
-            // Poll the cache until data is available or fetching is done
             const intervalId = setInterval(() => {
                 if (checkCache()) {
                     clearInterval(intervalId);
@@ -86,7 +94,6 @@ export function EmbeddingsField(props) {
             return;
         }
 
-        // Otherwise, fetch the data
         embeddingsCache.fetchingList = true;
         setLoadingEmbeddings(true);
         try {
@@ -101,6 +108,12 @@ export function EmbeddingsField(props) {
 
             const data = await response.json();
             embeddingsCache.list = data;
+            // Store in localStorage
+            try {
+                localStorage.setItem('embeddingsCache_list', JSON.stringify(data));
+            } catch (error) {
+                console.error("Error storing embeddings list in localStorage:", error);
+            }
             setAllEmbeddings(data);
         } catch (error) {
             console.error("Error fetching embeddings:", error);
@@ -110,7 +123,6 @@ export function EmbeddingsField(props) {
         }
     }, [props.apiUrls, allEmbeddings.length, setAllEmbeddings]);
 
-    // Fetch embedding arguments when an embedding is selected and set their values
     const fetchEmbeddingArguments = React.useCallback(async (emb_name) => {
         if (!emb_name) return;
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
@@ -118,35 +130,16 @@ export function EmbeddingsField(props) {
             return;
         }
 
-        // If we've already processed this embedding in this component instance, skip
-        if (fetchedRef.current[emb_name]) {
-            return;
-        }
-
-        // Process and set the arguments data to the form
-        const processAndSetArguments = (data) => {
+        const setArguments = (data) => {
             fetchedRef.current[emb_name] = true;
 
             if (values && setFieldValue) {
                 const currentEmbeddings = values.trainingStrategy.embeddings || [];
                 const index = currentIndex;
                 if (index !== null && index >= 0 && index < currentEmbeddings.length) {
-                    const processedData = {};
-                    Object.entries(data).forEach(([key, value]) => {
-                        if (Array.isArray(value)) {
-                            const array_data = {};
-                            Object.entries(value).forEach(([subkey, subvalue]) => {
-                                array_data[subvalue] = false;
-                            });
-                            processedData[key] = array_data;
-                        } else {
-                            processedData[key] = value;
-                        }
-                    });
-
                     const updatedEmbedding = {
                         ...currentEmbeddings[index],
-                        arguments: processedData
+                        arguments: data
                     };
                     const updatedEmbeddings = [...currentEmbeddings];
                     updatedEmbeddings[index] = updatedEmbedding;
@@ -155,18 +148,32 @@ export function EmbeddingsField(props) {
             }
         };
 
-        // If we have the arguments in the cache, use those
+        const processArguments = (data) => {
+            const processedData = {};
+            Object.entries(data).forEach(([key, value]) => {
+                if (Array.isArray(value)) {
+                    const array_data = {};
+                    Object.entries(value).forEach(([subkey, subvalue]) => {
+                        array_data[subvalue] = false;
+                    });
+                    processedData[key] = array_data;
+                } else {
+                    processedData[key] = value;
+                }
+            });
+            return processedData;
+        };
+
         if (embeddingsCache.arguments[emb_name]) {
-            processAndSetArguments(embeddingsCache.arguments[emb_name]);
+            setArguments(embeddingsCache.arguments[emb_name]);
             return;
         }
 
-        // If another component is already fetching these arguments, wait for that to complete
         if (embeddingsCache.fetchingArguments[emb_name]) {
             setLoading(true);
             const checkCache = () => {
                 if (embeddingsCache.arguments[emb_name]) {
-                    processAndSetArguments(embeddingsCache.arguments[emb_name]);
+                    setArguments(embeddingsCache.arguments[emb_name]);
                     setLoading(false);
                     return true;
                 }
@@ -177,7 +184,6 @@ export function EmbeddingsField(props) {
                 return false;
             };
 
-            // Poll the cache until data is available or fetching is done
             const intervalId = setInterval(() => {
                 if (checkCache()) {
                     clearInterval(intervalId);
@@ -187,7 +193,6 @@ export function EmbeddingsField(props) {
             return;
         }
 
-        // Otherwise, fetch the data
         embeddingsCache.fetchingArguments[emb_name] = true;
         setLoading(true);
         try {
@@ -200,9 +205,16 @@ export function EmbeddingsField(props) {
                 throw new Error(`Failed to fetch embedding arguments: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            let data = await response.json();
+            data = processArguments(data);
             embeddingsCache.arguments[emb_name] = data;
-            processAndSetArguments(data);
+            // Store in localStorage
+            try {
+                localStorage.setItem('embeddingsCache_arguments', JSON.stringify(embeddingsCache.arguments));
+            } catch (error) {
+                console.error("Error storing embedding arguments in localStorage:", error);
+            }
+            setArguments(data);
         } catch (error) {
             console.error("Error fetching embedding arguments:", error);
         } finally {
@@ -226,12 +238,10 @@ export function EmbeddingsField(props) {
         }
 
         if (selectedEmbeddingId) {
-            // Only reset the fetchedRef if we don't have the arguments in the cache
             if (!embeddingsCache.arguments[selectedEmbeddingId]) {
                 fetchedRef.current[selectedEmbeddingId] = false;
             }
         }
-
         fetchEmbeddingArguments(selectedEmbeddingId);
     };
 
@@ -312,7 +322,6 @@ export function EmbeddingsField(props) {
 
 
     React.useEffect(() => {
-        // Only fetch embeddings if we don't already have them in the component state
         if (allEmbeddings.length === 0) {
             fetchEmbeddings();
         }
@@ -320,8 +329,6 @@ export function EmbeddingsField(props) {
 
     React.useEffect(() => {
         if (currentEmbeddingId) {
-            // If we already have the arguments in the cache and they've been processed by this instance,
-            // no need to fetch again
             if (embeddingsCache.arguments[currentEmbeddingId] && fetchedRef.current[currentEmbeddingId]) {
                 return;
             }
@@ -409,4 +416,34 @@ export function EmbeddingsField(props) {
             </Button>
         </React.Fragment>
     );
+}
+
+export function convertEmbeddingsArgumentsObjectsToArrays(data){
+    console.log(data);
+    const new_embeddings = [...data?.trainingStrategy?.embeddings];
+    const embeddings = data?.trainingStrategy?.embeddings;
+
+    embeddings.forEach(function (embedding, index) {
+        const name = embedding.name;
+        const new_arguments= {};
+        Object.entries(embedding.arguments).forEach(([key, value]) => {
+            if (typeof value === "object") {
+                let new_items = [];
+                Object.entries(value).forEach(([key, value]) => {
+                    if (value) {
+                        new_items = [...new_items, key];
+                    }
+                })
+                new_arguments[key] = new_items;
+            } else {
+                new_arguments[key] = value;
+            }
+        })
+        new_embeddings[index] = {
+            name: name,
+            arguments: new_arguments
+        }
+    });
+    data.trainingStrategy.embeddings = new_embeddings;
+    return data;
 }

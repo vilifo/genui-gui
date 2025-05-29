@@ -1,5 +1,5 @@
 import * as Yup from 'yup';
-import {MolsetActivitiesSummary, ModelCardNew, SimpleDropDownToggle} from '../../../genui';
+import {MolsetActivitiesSummary, ModelCardNew, SimpleDropDownToggle, convertEmbeddingsArgumentsObjectsToArrays} from '../../../genui';
 import React from 'react';
 import {QSARExtraFields, QSARTrainingFields, QSARValidationStrategies} from './QSARModelFormFields';
 import {Button, CardBody, CardHeader, Col, Row, CardFooter} from 'reactstrap';
@@ -43,7 +43,7 @@ export default function QSARModelCreateCard(props) {
 
     const trainingStrategySchema = {
         activityThreshold: Yup.number().min(0, 'Activity threshold must be zero or positive.').required('Activity threshold is a required parameter.'),
-        embeddings: Yup.array().of(Yup.object()).required('You need to select at least one embedding.'),
+        embeddings: Yup.array().of(Yup.object().shape({name:Yup.string(), arguments:Yup.object()})).required('You need to supply one or more descriptor sets for training.'),
         parameters: Yup.object().shape({
             alg: Yup.string().required('You need to select an algorithm.'),
             parameters: Yup.object().nullable()
@@ -52,7 +52,7 @@ export default function QSARModelCreateCard(props) {
     const validationStrategiesSchema = Yup.array().of(
         Yup.object().shape({
             cvFolds: Yup.number().integer().min(0, 'Number of CV folds must be at least 0.'),
-            dataSplit: Yup.string(),
+            dataSplit: Yup.object(),
             metrics: Yup.array().of(Yup.number())
         })
     );
@@ -143,6 +143,7 @@ export default function QSARModelCreateCard(props) {
                 if (data.predictionsUnits === "") {
                     data.predictionsUnits = null;
                 }
+                data = convertEmbeddingsArgumentsObjectsToArrays(data);
                 return data;
             }}
         />

@@ -87,7 +87,8 @@ class ModelFormRenderer extends React.Component {
       // If it's an array, map over each item and merge with default metrics if needed
       validationStrategiesInit = this.props.validationStrategiesInit.map(strategy => {
         const defaultInit = this.state.metrics && !this.disabledModelFormFields.includes('validationStrategy.metrics') ? {
-          metrics: this.state.metrics.length > 0 ? [this.state.metrics[0].id] : []
+          metrics: this.state.metrics.length > 0 ? [this.state.metrics[0].id] : [],
+          cvFolds: 3,
         } : {};
         return Object.assign({}, defaultInit, strategy);
       });

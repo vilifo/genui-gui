@@ -55,6 +55,8 @@ const ModelCardNew = (props) => {
 
       const filesUrl = new URL(`${modelID}/files/`, props.listURL);
       datas.forEach((data) => {
+        console.log('Uploading model file to URL:', filesUrl.toString());
+        console.log('File upload data:', data);
         fetch(filesUrl, {
           method: 'POST',
           body: data,
@@ -73,6 +75,8 @@ const ModelCardNew = (props) => {
   };
 
   const postModelData = (data, afterModelPOST) => {
+    console.log('Creating model with data:', data);
+    console.log('Model creation URL:', props.listURL);
     fetch(
       props.listURL
       , {
