@@ -58,10 +58,9 @@ const ModelFormRenderer = (props) => {
                 }
             });
             setMetrics(metrics);
-            setModes([mode]);
-        } else {
-            setModes([mode]);
         }
+        setModes([mode]);
+        initFormData();
     };
 
     const generateInit = () => {
@@ -148,7 +147,9 @@ const ModelFormRenderer = (props) => {
         if (parameters) {
             const parameterValidators = {};
             for (const param of parameters) {
-                console.log(param);
+                if (param.defaultValue === '{}') {
+                    param.contentType = 'object';
+                }
                 parameterValidators[param.name] = CTYPE_TO_VALIDATOR[param.contentType]
             }
 

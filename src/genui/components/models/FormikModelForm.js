@@ -8,7 +8,8 @@ const ParameterField = (props) => {
     string: name => <Field name={name} as={Input} type="text"/>,
     integer: name => <Field name={name} as={Input} type="number"/>,
     float: name => <Field name={name} as={Input} type="number" step="0.01"/>,
-    bool: name => <Field name={name} as={Input} type="checkbox"/>
+    bool: name => <Field name={name} as={Input} type="checkbox"/>,
+    object: name => <div id={name}/>
   };
 
     return CTYPE_TO_COMPONENT[props.parameter.contentType](props.name)
