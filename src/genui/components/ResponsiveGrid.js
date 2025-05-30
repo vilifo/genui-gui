@@ -1,7 +1,7 @@
 import React from "react";
 import {Responsive, WidthProvider} from "react-grid-layout";
 
-const ResponsiveGrid = (props) => {
+const ResponsiveGrid = React.forwardRef((props, ref) => {
     const getLayout = (items, cols, config) => {
         let row_id = 0;
         let col_id = 0;
@@ -55,6 +55,6 @@ const ResponsiveGrid = (props) => {
             {props.children}
         </ResponsiveGridLayout>
     );
-};
+});
 
 export default ResponsiveGrid;

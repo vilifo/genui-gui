@@ -43,7 +43,7 @@ export default function QSARModelCreateCard(props) {
 
     const trainingStrategySchema = {
         activityThreshold: Yup.number().min(0, 'Activity threshold must be zero or positive.').required('Activity threshold is a required parameter.'),
-        embeddings: Yup.array().of(Yup.object().shape({name:Yup.string(), arguments:Yup.object()})).required('You need to supply one or more descriptor sets for training.'),
+        embeddings: Yup.array().of(Yup.object().shape({name:Yup.string(), arguments:Yup.mixed().nullable()})).required('You need to supply one or more descriptor sets for training.'),
         parameters: Yup.object().shape({
             alg: Yup.string().required('You need to select an algorithm.'),
             parameters: Yup.object().nullable()
@@ -69,6 +69,35 @@ export default function QSARModelCreateCard(props) {
 
         trainingStrategySchema.activityType = Yup.number().integer().positive('Activity type ID must be a positive integer.').required('You need to select an activity type for modelling.');
         trainingStrategySchema.activitySet = Yup.number().integer().positive('Activity set ID must be a positive integer.').required('You need to supply a set of activities to use for modelling.');
+    }
+
+    const handleSubmit = (values, actions) => {
+        const errors = {};
+        try {
+            trainingStrategySchema.validateSync(values.trainingStrategy, { abortEarly: false });
+        } catch (err) {
+            console.log('Training Strategy Validation Errors:', err.errors);
+            errors.trainingStrategy = err.errors;
+        }
+
+        try {
+            extraParamsSchema.validateSync(values.extraParams, { abortEarly: false });
+        } catch (err) {
+            console.log('Extra Params Validation Errors:', err.errors);
+            errors.extraParams = err.errors;
+        }
+
+        if (validationStrategiesSchema) {
+            try {
+                validationStrategiesSchema.validateSync(values.validationStrategies, { abortEarly: false });
+            } catch (err) {
+                console.log('Validation Strategies Errors:', err.errors);
+                errors.validationStrategies = err.errors;
+            }
+        }
+
+        console.log('Form Values:', values);
+        console.log('Validation Errors:', errors);
     }
 
     return !dataReady ? (

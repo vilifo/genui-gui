@@ -1,43 +1,30 @@
 import React from 'react';
-import { Button, CardBody, CardFooter } from 'reactstrap';
+import {Button, CardBody, CardFooter} from 'reactstrap';
 
-class ModelFormCardBody extends React.Component {
-
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      formIsSubmitting : false,
-    }
-  }
-
-  setFormSubmitting = (state) => {
-    this.setState({formIsSubmitting : state});
-  };
-
-  render() {
-    const formIsSubmitting = this.state.formIsSubmitting;
-    const Form = this.props.form;
+const ModelFormCardBody = (props) => {
+    const [formIsSubmitting, setFormIsSubmitting] = React.useState(false);
+    const Form = props.form;
 
     return (
-      <React.Fragment>
-        <CardBody className="scrollable">
-          <Form
-            {...this.props}
-            onSubmit={
-              (values) => {
-                this.setFormSubmitting(true);
-                this.props.handleCreate(values);
-              }
-            }
-          />
-        </CardBody>
-        <CardFooter>
-          <Button form={`${this.props.modelClass}-${this.props.formNameSuffix}-form`} type="submit" color="primary" disabled={formIsSubmitting}>{formIsSubmitting ? "Creating..." : "Create"}</Button>
-        </CardFooter>
-      </React.Fragment>
+        <React.Fragment>
+            <CardBody className="scrollable">
+                <Form
+                    {...props}
+                    onSubmit={
+                        (values) => {
+                            console.log("Submitting form with values:", values);
+                            setFormIsSubmitting(true);
+                            props.handleCreate(values);
+                        }
+                    }
+                />
+            </CardBody>
+            <CardFooter>
+                <Button form={`${props.modelClass}-${props.formNameSuffix}-form`} type="submit" color="primary"
+                        disabled={formIsSubmitting}>{formIsSubmitting ? "Creating..." : "Create"}</Button>
+            </CardFooter>
+        </React.Fragment>
     )
-  }
 }
 
 export default ModelFormCardBody;

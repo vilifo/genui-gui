@@ -111,6 +111,8 @@ function ModelInfo({
     }
   ] : []).concat(extraValidationParams || []);
 
+  const ExtraInfoComponent = extraInfoComponent;
+
   return (
       <Row>
         <Col sm="12">
@@ -174,7 +176,7 @@ function ModelInfo({
           <h4>Useful API URLs</h4>
           <a href={modelUrl.toString()} target="_blank" rel="noopener noreferrer">{modelUrl.toString()}</a>
 
-          {extraInfoComponent && <extraInfoComponent model={model} modelUrl={modelUrl} {...props} />}
+          {extraInfoComponent && <ExtraInfoComponent model={model} modelUrl={modelUrl} {...props} />}
         </Col>
       </Row>
   );

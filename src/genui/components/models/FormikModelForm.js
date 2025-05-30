@@ -1,20 +1,18 @@
 import React from 'react';
 import { Field, Formik } from 'formik';
-import { Form, FormGroup, FormText, Input, Label } from 'reactstrap';
+import { Form, FormGroup, FormText, Input, Label, Col } from 'reactstrap';
 import { FieldErrorMessage, FileUpload } from '../../index';
 
-// class ParameterField extends React.Component {
-//   CTYPE_TO_COMPONENT = {
-//     string: name => <Field name={name} as={Input} type="text"/>,
-//     integer: name => <Field name={name} as={Input} type="number"/>,
-//     float: name => <Field name={name} as={Input} type="number" step="0.01"/>,
-//     bool: name => <Field name={name} as={Input} type="checkbox"/>
-//   };
-//
-//   render() {
-//     return this.CTYPE_TO_COMPONENT[this.props.parameter.contentType](this.props.name)
-//   }
-// }
+const ParameterField = (props) => {
+  const CTYPE_TO_COMPONENT = {
+    string: name => <Field name={name} as={Input} type="text"/>,
+    integer: name => <Field name={name} as={Input} type="number"/>,
+    float: name => <Field name={name} as={Input} type="number" step="0.01"/>,
+    bool: name => <Field name={name} as={Input} type="checkbox"/>
+  };
+
+    return CTYPE_TO_COMPONENT[props.parameter.contentType](props.name)
+}
 
 function FormikModelForm (props) {
   const validationStrategiesPrefix = "validationStrategies";
@@ -24,6 +22,7 @@ function FormikModelForm (props) {
   const TrainingStrategyExtras = props.trainingStrategyFields;
   const validationStrategiesFields = props.validationStrategiesFields;
   const ExtraFields = props.extraFields;
+  const parameters = props.parameters ? props.parameters : [];
 
   const disabled = props.disabledModelFormFields ? props.disabledModelFormFields : [];
   return (
@@ -109,6 +108,22 @@ function FormikModelForm (props) {
                   }
                 </React.Fragment>
               ) : null
+            }
+
+            {parameters.length > 0 ? <h4>{props.chosenAlgorithm.name} Parameters</h4> : null}
+
+            {
+              parameters.map(param => {
+                const name = `${trainingStrategyPrefix}.parameters.${param.name}`;
+                return (
+                    <FormGroup key={name} row>
+                      <Label htmlFor={name} sm={4}>{param.name}</Label>
+                      <Col sm={8}>
+                        <ParameterField parameter={param} name={name}/>
+                        <FieldErrorMessage name={name}/>
+                      </Col>
+                    </FormGroup>
+                )})
             }
 
             {formik.initialValues.hasOwnProperty(validationStrategiesPrefix) ?
