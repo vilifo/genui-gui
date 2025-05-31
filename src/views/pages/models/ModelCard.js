@@ -2,10 +2,8 @@ import React from 'react';
 import { ModelCard, ModelInfoTab, ModelPerformance, ModelPreds } from '../../../genui';
 import QSARPerformanceOverview from './tabs/PerformanceOverview';
 
-class QSARModelCard extends React.Component {
-
-  render() {
-    const model =  this.props.model;
+const QSARModelCard = (props) => {
+    const model =  props.model;
     const trainingStrategy = model.trainingStrategy;
 
     const modelData = [
@@ -90,8 +88,7 @@ class QSARModelCard extends React.Component {
       }
     ];
 
-    return <ModelCard {...this.props} tabs={tabs}/>
-  }
+    return <ModelCard {...props} tabs={tabs}/>
 }
 
 export default QSARModelCard;

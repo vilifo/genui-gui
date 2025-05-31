@@ -357,26 +357,29 @@ export function QSARValidationStrategies(props) {
 
     return (
         <React.Fragment>
-            {values && values.validationStrategies && values.validationStrategies.map((strategy, index) => (
-                <div key={index} className="col-md-4 mb-4">
-                    <div className="p-3 border rounded" style={{ backgroundColor: `hsl(${index * 137.5}, 90%, 90%)`}}>
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h5 className="mb-0">Validation Strategy {index + 1}</h5>
-                        {values.validationStrategies.length > 1 && (
-                            <Button color="danger" size="sm" onClick={() => removeValidationStrategy(index)}>
-                                Remove
-                            </Button>
-                        )}
+            <div className="row">
+                {values && values.validationStrategies && values.validationStrategies.map((strategy, index) => (
+                    <div key={index} className="col-md-4 mb-4">
+                        <div className="p-3 border rounded"
+                             style={{backgroundColor: `hsl(${index * 137.5}, 90%, 90%)`}}>
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <h5 className="mb-0">Validation Strategy {index + 1}</h5>
+                                {values.validationStrategies.length > 1 && (
+                                    <Button color="danger" size="sm" onClick={() => removeValidationStrategy(index)}>
+                                        Remove
+                                    </Button>
+                                )}
+                            </div>
+                            <QSARValidationStrategies
+                                {...props}
+                                validationStrategyPrefix={`validationStrategy[${index}]`}
+                                formikProps={props.formikProps}
+                                allDataSplits={allDataSplits}
+                            />
+                        </div>
                     </div>
-                    <QSARValidationStrategies
-                        {...props}
-                        validationStrategyPrefix={`validationStrategy[${index}]`}
-                        formikProps={props.formikProps}
-                        allDataSplits={allDataSplits}
-                    />
-                    </div>
-                </div>
-            ))}
+                ))}
+            </div>
             <Button color="primary" onClick={addValidationStrategy} className="mt-2">
                 Add Validation Strategy
             </Button>

@@ -28,7 +28,7 @@ const ModelFormRenderer = (props) => {
         return ret;
     };
 
-    const [metrics, setMetrics] = React.useState(props.metrics ? initMetrics(props.metrics) : null)
+    const [metrics, setMetrics] = React.useState(!props.omitValidation && props.metrics ? initMetrics(props.metrics) : null)
     const [modes, setModes] = React.useState(chosenAlgorithm.validModes);
     const [initialValues, setInitialValues] = React.useState(null);
     const [schema, setSchema] = React.useState(null);
@@ -189,7 +189,7 @@ const ModelFormRenderer = (props) => {
                 formDataReady: formDataReady,
             });
         }
-
+        // console.log(validationObj);
         return Yup.object().shape(validationObj);
     };
 

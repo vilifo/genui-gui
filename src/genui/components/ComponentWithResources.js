@@ -1,95 +1,107 @@
 import React from 'react';
 import withUnmounted from '@ishawnwang/withunmounted';
 
-class ComponentWithResources extends React.Component {
-  abort = new AbortController();
-  hasUnmounted = false;
+const ComponentWithResources = React.forwardRef((props, ref) => {
+  const [allLoaded, setAllLoaded] = React.useState(false);
+  const [data, setData] = React.useState({});
+  const intervalIDs = React.useRef({});
+  const prevDefinitionRef = React.useRef(props.definition);
+  const abortControllers = React.useRef({});
+  const hasUnmounted = React.useRef(false);
+  const method = props.method ? props.method : 'GET';
+  const interval = props.updateInterval ? props.updateInterval : null;
 
-  constructor(props) {
-    super(props);
+  React.useEffect(() => {
+    const currentIntervals = intervalIDs.current;
+    const currentAbortControllers = abortControllers.current;
 
-    this.interval = this.props.updateInterval ? this.props.updateInterval: null;
-    this.intervalIDs = {};
-    this.method = this.props.method ? this.props.method : 'GET'
-    this.state = {
-      allLoaded : false,
-      data : {}
+    updateResources();
+
+    return () => {
+      Object.keys(currentIntervals).forEach(ID => clearTimeout(currentIntervals[ID]));
+      Object.values(currentAbortControllers).forEach(controller => controller.abort());
+      hasUnmounted.current = true;
+    };
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  React.useEffect(() => {
+    if (props.updateCondition && props.updateCondition(props, props)) {
+      updateResources();
     }
-  }
 
-  componentDidMount() {
-    this.updateResources();
-  }
-
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    if (this.props.updateCondition && this.props.updateCondition(prevProps, this.props, prevState, this.state, snapshot)) {
-      this.updateResources();
-    }
-
-    if (Object.keys(prevProps.definition).length !==  Object.keys(this.props.definition).length) {
+    if (Object.keys(prevDefinitionRef.current).length !== Object.keys(props.definition).length) {
       // TODO: add a more sophisticated comparison
-      this.updateResources();
+      updateResources();
     }
-  }
+    prevDefinitionRef.current = props.definition;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props]);
 
-  updateResources = () => {
-    this.setState({allLoaded: false, data: {}});
-    for (let [name, url] of Object.entries(this.props.definition)) {
-      this.fetchResource(name, url);
-      if (this.interval) {
-        clearTimeout(this.intervalIDs[name]);
-        this.intervalIDs[name] = null;
-        this.checkForUpdates(name);
+  const updateResources = () => {
+    setAllLoaded(false);
+    setData({});
+
+    for (let [name, url] of Object.entries(props.definition)) {
+      fetchResource(name, url);
+      if (interval) {
+        clearTimeout(intervalIDs.current[name]);
+        intervalIDs.current[name] = null;
+        checkForUpdates(name);
       }
     }
   };
 
-  componentWillUnmount() {
-    Object.keys(this.intervalIDs).forEach(ID => clearTimeout(this.intervalIDs[ID]));
-    this.abort.abort();
-  }
+  const checkForUpdates = (name) => {
+    intervalIDs.current[name] = setTimeout(() => checkForUpdates(name), interval);
 
-  checkForUpdates = (name) => {
-    this.intervalIDs[name] = setTimeout(() => this.checkForUpdates(name), this.interval);
-
-    if (this.props.fetchCondition && !this.props.fetchCondition(this.props)) {
+    if (props.fetchCondition && !props.fetchCondition(props)) {
       return;
     }
 
-    if (this.state.allLoaded) {
+    if (allLoaded) {
       // console.log(name, "fetching");
-      this.fetchResource(name, this.props.definition[name]);
+      fetchResource(name, props.definition[name]);
     }
   };
 
-  fetchResource = (name, url) => {
-    fetch(url, {signal : this.abort.signal, credentials: "include", method:
-        this.method})
-      .then(response => response.json())
-      .then((data) => {
-        if (this.hasUnmounted) {
-          return
-        }
+  const fetchResource = (name, url) => {
+    // Abort previous request if exists
+    if (abortControllers.current[name]) {
+      abortControllers.current[name].abort();
+    }
 
-        this.setState((prevState) => {
-          prevState.data[name] = data;
-          if (Object.keys(prevState.data).length === Object.keys(this.props.definition).length) {
-            prevState.allLoaded = true;
+    // Create new controller for this request
+    abortControllers.current[name] = new AbortController();
+
+    fetch(url, {
+      signal: abortControllers.current[name].signal,
+      credentials: "include",
+      method: method
+    })
+        .then(response => response.json())
+        .then((newData) => {
+          if (hasUnmounted.current) {
+            return;
           }
-          return prevState;
+
+          setData(prevData => {
+            const updatedData = { ...prevData, [name]: newData };
+            if (Object.keys(updatedData).length === Object.keys(props.definition).length) {
+              setAllLoaded(true);
+            }
+            return updatedData;
+          });
+        })
+        .catch(e => {
+          if (e.name === 'AbortError') {
+            return; // Ignore abort errors
+          }
+          console.error(e);
         });
-      })
-      .catch(e => {
-        // TODO: do something useful
-        // console.log(e)
-      })
-    ;
   };
 
-  render() {
-    return this.props.children(this.state.allLoaded, this.state.data, name => this.fetchResource(name, this.props.definition[name]));
-  }
-
-}
+  return props.children(allLoaded, data, name => fetchResource(name, props.definition[name]));
+});
 
 export default withUnmounted(ComponentWithResources);

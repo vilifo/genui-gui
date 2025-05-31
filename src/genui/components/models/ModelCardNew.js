@@ -51,7 +51,6 @@ const ModelCardNew = (props) => {
           }
         }
       }
-      // No need for setState in functional component
 
       const filesUrl = new URL(`${modelID}/files/`, props.listURL);
       datas.forEach((data) => {

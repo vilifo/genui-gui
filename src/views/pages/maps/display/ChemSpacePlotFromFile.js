@@ -1,28 +1,18 @@
 import React from "react";
 import {PLOTLY_COLORS} from "../../../../genui";
 
-class ChemSpacePlotFromFile extends React.Component {
 
-    constructor(props) {
-        super(props);
+const ChemSpacePlotFromFile = (props) => {
+    const [mapDrawn, setMapDrawn] = React.useState(false);
+    const [error, setError] = React.useState(null);
+    const chemspaceRef = React.useRef(null);
 
-        this.state = {
-            mapDrawn: false,
-            error: null
-        }
-    }
+    React.useEffect(() => {
+        drawMap();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.selectedMap.id]);
 
-    componentDidMount() {
-        this.drawMap();
-    }
-
-    componentDidUpdate(prevProps, prevState, snapshot) {
-        if (this.props.selectedMap.id !== prevProps.selectedMap.id) {
-            this.drawMap();
-        }
-    }
-
-    drawMap() {
+    const drawMap = () => {
         window.chemspace = new window.ChemSpace({ //instantiate ChemSpace
             target: "chemspace", // the ID of target HTML element
             colors: PLOTLY_COLORS,
@@ -39,57 +29,51 @@ class ChemSpacePlotFromFile extends React.Component {
             // }
         });
 
-        if (!this.props.selectedMap.chemspaceJSON) {
-            this.setState({
-                error: `Fatal error while rendering the map. No ChemSpace.js 
-                JSON file found for "${this.props.selectedMap.name}". This
+        if (!props.selectedMap.chemspaceJSON) {
+            setError(`Fatal error while rendering the map. No ChemSpace.js 
+                JSON file found for "${props.selectedMap.name}". This
                 map is probably not completed, yet. Check the creator 
-                progress or come back later and refresh the page.`
-            });
-            return
+                progress or come back later and refresh the page.`);
+            return;
         }
-        window.chemspace.read_data_from_file(this.props.selectedMap.chemspaceJSON.file); // read data
+        window.chemspace.read_data_from_file(props.selectedMap.chemspaceJSON.file); // read data
         if (!window.chemspace.data) {
-            this.setState({
-                error: `Could not load any structures from the supplied ChemSpace.js 
-                JSON file for "${this.props.selectedMap.name}". This
+            setError(`Could not load any structures from the supplied ChemSpace.js 
+                JSON file for "${props.selectedMap.name}". This
                 map is probably not completed, yet. Check the creator 
-                progress or come back later and refresh the page.`
-            });
-            return
+                progress or come back later and refresh the page.`);
+            return;
         }
         const disabled_feature = "--- Disabled ---";
         window.chemspace.add_feature({name : disabled_feature, point2value : {}});
         window.chemspace.update_settings({point_size: {index: window.chemspace.data.feature_names.indexOf("--- Disabled ---")}})
         window.chemspace.draw(); //draw chemical space
-        this.setState({mapDrawn: true});
+        setMapDrawn(true);
 
         // register events
         window.chemspace.events.point_tooltip = (point_ids, color, evt) => {
-            this.props.onMolHover(window.chemspace.data.compounds[point_ids[0]].id);
+            props.onMolHover(window.chemspace.data.compounds[point_ids[0]].id);
             return window.chemspace._get_point_tooltip(evt);
         };
         window.chemspace.events.points_selection = (point_ids) => {
-            this.props.onMolsSelect(point_ids.map(point_id => window.chemspace.data.compounds[point_id].id));
+            props.onMolsSelect(point_ids.map(point_id => window.chemspace.data.compounds[point_id].id));
         }
-    }
+    };
 
-    render() {
-        return (
-            <React.Fragment>
-                {
-                    !this.state.mapDrawn ? <div>Fetching map data...</div> : null
-                }
-                <div id="chemspace" ref="chemspace" />
-                {
-                    this.state.error ? <div>{this.state.error}</div> : null
-                }
-                <div>
-                    <p className="text-muted">Powered By <a target='_blank' rel="noopener noreferrer" href='https://openscreen.cz/software/chemspace/home/'>ChemSpace.js</a></p>
-                </div>
-            </React.Fragment>
-        )
-    }
-}
+    return (
+        <>
+            {
+                !mapDrawn ? <div>Fetching map data...</div> : null
+            }
+            <div id="chemspace" ref={chemspaceRef} />
+            {
+                error ? <div>{error}</div> : null
+            }
+            <div>
+                <p className="text-muted">Powered By <a target='_blank' rel="noopener noreferrer" href='https://openscreen.cz/software/chemspace/home/'>ChemSpace.js</a></p>
+            </div>
+        </>
+    );
+};
 
 export default ChemSpacePlotFromFile;
