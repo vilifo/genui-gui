@@ -32,7 +32,7 @@ export default function QSARModelCreateCard(props) {
     };
     const validationStrategiesInit = [{
         cvFolds: 3,
-        metrics: [1],
+        metrics: [props.metrics[0].id],
         dataSplit: {name: "RandomSplit"},
     }];
     const extraParamInit = {
@@ -53,7 +53,7 @@ export default function QSARModelCreateCard(props) {
         Yup.object().shape({
             cvFolds: Yup.number().integer().min(0, 'Number of CV folds must be at least 0.'),
             dataSplit: Yup.object(),
-            metrics: Yup.array().of(Yup.number())
+            metrics: Yup.array().of(Yup.number().positive('Metric ID must be a positive integer.'))
         })
     );
 
@@ -71,36 +71,7 @@ export default function QSARModelCreateCard(props) {
         trainingStrategySchema.activitySet = Yup.number().integer().positive('Activity set ID must be a positive integer.').required('You need to supply a set of activities to use for modelling.');
     }
 
-    const handleSubmit = (values, actions) => {
-        const errors = {};
-        try {
-            trainingStrategySchema.validateSync(values.trainingStrategy, { abortEarly: false });
-        } catch (err) {
-            console.log('Training Strategy Validation Errors:', err.errors);
-            errors.trainingStrategy = err.errors;
-        }
-
-        try {
-            extraParamsSchema.validateSync(values.extraParams, { abortEarly: false });
-        } catch (err) {
-            console.log('Extra Params Validation Errors:', err.errors);
-            errors.extraParams = err.errors;
-        }
-
-        if (validationStrategiesSchema) {
-            try {
-                validationStrategiesSchema.validateSync(values.validationStrategies, { abortEarly: false });
-            } catch (err) {
-                console.log('Validation Strategies Errors:', err.errors);
-                errors.validationStrategies = err.errors;
-            }
-        }
-
-        console.log('Form Values:', values);
-        console.log('Validation Errors:', errors);
-    }
-
-    return !dataReady ? (
+   return !dataReady ? (
         <React.Fragment>
             <CardHeader>QSAR Training Set and Activity Endpoint</CardHeader>
             <CardBody className="scrollable">

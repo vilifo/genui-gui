@@ -103,7 +103,6 @@ const ModelCardNew = (props) => {
     );
   };
 
-  // No render method in functional component
   // if (nUploads > 0 && !uploadFinished) {
   //   return <div>Uploading files...</div>
   // }
@@ -113,7 +112,7 @@ const ModelCardNew = (props) => {
       <React.Fragment>
         <CardHeader>Create New {algorithm.name} Model</CardHeader>
         <ModelFormRenderer
-          {...props} // all these props will be passed down to the component
+          {...props}
           chosenAlgorithm={algorithm}
           component={props => <ModelFormCardBody {...props} form={props.form ? props.form : FormikModelForm}/>}
           handleCreate={newModelFromFormData}

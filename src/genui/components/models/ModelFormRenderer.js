@@ -18,9 +18,9 @@ const ModelFormRenderer = (props) => {
     const enableFileUploads = props.enableFileUploads;
     const disabledModelFormFields = props.disabledModelFormFields ? props.disabledModelFormFields : [];
 
-    const initMetrics = (metrics) => {
+    const initMetrics = (metrics_array) => {
         const ret = [];
-        metrics.forEach(metric => {
+        metrics_array.forEach(metric => {
             if (metric.validAlgorithms.length === 0 || metric.validAlgorithms.find(alg => chosenAlgorithm.id === alg)) {
                 ret.push(metric);
             }
@@ -28,7 +28,7 @@ const ModelFormRenderer = (props) => {
         return ret;
     };
 
-    const [metrics, setMetrics] = React.useState(props.omitValidation && props.metrics ? initMetrics(props.metrics) : null)
+    const [metrics, setMetrics] = React.useState(props.metrics ? initMetrics(props.metrics) : null)
     const [modes, setModes] = React.useState(chosenAlgorithm.validModes);
     const [initialValues, setInitialValues] = React.useState(null);
     const [schema, setSchema] = React.useState(null);
@@ -42,7 +42,6 @@ const ModelFormRenderer = (props) => {
     }, [])
 
 
-
     const initFormData = () => {
         setInitialValues(generateInit());
         setSchema(generateSchema());
@@ -51,13 +50,13 @@ const ModelFormRenderer = (props) => {
 
     const handleModeSelect = (mode) => {
         if (metrics) {
-            const metrics = [];
+            const metrics_array = [];
             metrics.forEach(metric => {
                 if (metric.validModes.find(item => mode.id === item.id)) {
-                    metrics.push(metric);
+                    metrics_array.push(metric);
                 }
             });
-            setMetrics(metrics);
+            setMetrics(metrics_array);
         }
         setModes([mode]);
         initFormData();
@@ -69,12 +68,9 @@ const ModelFormRenderer = (props) => {
             mode: modes.length > 0 ? modes[0].id : [],
         };
         const trainingStrategyInit = Object.assign(trainingStrategyDefaultInit, props.trainingStrategyInit ? props.trainingStrategyInit : {});
-        // Handle validation strategy initialization
         let validationStrategiesInit;
 
-        // Check if validationStrategiesInit is provided as an array
         if (props.validationStrategiesInit && Array.isArray(props.validationStrategiesInit)) {
-            // If it's an array, map over each item and merge with default metrics if needed
             validationStrategiesInit = props.validationStrategiesInit.map(strategy => {
                 const defaultInit = metrics && !disabledModelFormFields.includes('validationStrategy.metrics') ? {
                     metrics: metrics.length > 0 ? [metrics[0].id] : [],
@@ -83,12 +79,10 @@ const ModelFormRenderer = (props) => {
                 return Object.assign({}, defaultInit, strategy);
             });
         } else {
-            // If it's not an array, create a single strategy object
             const validationStrategyDefaultInit = metrics && !disabledModelFormFields.includes('validationStrategy.metrics') ? {
                 metrics: metrics.length > 0 ? [metrics[0].id] : []
             } : {};
             validationStrategiesInit = Object.assign({}, validationStrategyDefaultInit, props.validationStrategyInit ? props.validationStrategyInit : {});
-            // Convert to array if it's not empty
             if (Object.keys(validationStrategiesInit).length !== 0) {
                 validationStrategiesInit = [validationStrategiesInit];
             }
@@ -104,15 +98,12 @@ const ModelFormRenderer = (props) => {
             initialValues.modelFile = undefined;
         }
 
-        // validation
         if (validationStrategiesInit && validationStrategiesInit.length > 0) {
             initialValues.validationStrategies = validationStrategiesInit;
         }
 
-        // extra parameters
         initialValues = Object.assign(initialValues, props.extraParamsInit ? props.extraParamsInit : {});
 
-        // default parameters
         if (parameters) {
             const parameterDefaults = {};
             for (const param of parameters) {
@@ -125,13 +116,11 @@ const ModelFormRenderer = (props) => {
             initialValues = props.onValuesInit(initialValues, {
                 metrics: metrics,
                 modes: modes,
-                initialValues:initialValues,
+                initialValues: initialValues,
                 schema: schema,
                 formDataReady: formDataReady,
             });
         }
-
-        // console.log(initialValues);
 
         return initialValues;
     };
@@ -143,7 +132,6 @@ const ModelFormRenderer = (props) => {
                 .max(256, 'Mode must be 256 characters or less.').required('You must specify a mode.'),
         };
 
-        // parameters
         if (parameters) {
             const parameterValidators = {};
             for (const param of parameters) {
@@ -154,14 +142,11 @@ const ModelFormRenderer = (props) => {
             }
 
             trainingStrategyDefault.parameters = Yup.object().shape({
-                ...parameterValidators,
-                // alg: Yup.string().required,
-                // parameters: Yup.object().nullable()
+                ...parameterValidators
             });
         }
 
         const trainingStrategy = Object.assign(trainingStrategyDefault, props.trainingStrategySchema);
-        // the main schema object
         let validationObj = {
             name: Yup.string()
                 .max(256, 'Name must be less than 256 characters long.')
@@ -177,13 +162,9 @@ const ModelFormRenderer = (props) => {
             validationObj.modelFile = Yup.mixed().required("Model file is required.");
         }
 
-        // validation added only if there is something to add
-        // Check if validationStrategiesSchema is already an array validator
         if (props.validationStrategiesSchema && props.validationStrategiesSchema._subType === 'array') {
-            // If it's already an array validator, use it directly
             validationObj.validationStrategies = props.validationStrategiesSchema;
         } else {
-            // Otherwise, create a validation schema for a single strategy and wrap it in an array
             const validationStrategyDefault = metrics && !disabledModelFormFields.includes('validationStrategies.metrics') ? {
                 metrics: Yup.array().of(Yup.number().positive('Metric ID must be a positive integer.')).required('You need to supply at least one metric for validation.'),
             } : {};
@@ -191,27 +172,24 @@ const ModelFormRenderer = (props) => {
             const validationStrategies = Object.assign({}, validationStrategyDefault, props.validationStrategiesSchema || {});
 
             if (Object.keys(validationStrategies).length !== 0) {
-                // Create an array validator for validation strategies
                 validationObj.validationStrategy = Yup.array().of(
                     Yup.object().shape(validationStrategies)
                 ).min(1, 'At least one validation strategy is required');
             }
         }
 
-        // extra parameters
         validationObj = Object.assign(validationObj, props.extraParamsSchema);
 
         if (props.onSchemaInit) {
             validationObj = props.onSchemaInit(validationObj, {
                 metrics: metrics,
                 modes: modes,
-                initialValues:initialValues,
+                initialValues: initialValues,
                 schema: schema,
                 formDataReady: formDataReady,
             });
         }
 
-        // console.log(validationObj);
         return Yup.object().shape(validationObj);
     };
 

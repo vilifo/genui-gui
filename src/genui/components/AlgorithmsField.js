@@ -31,10 +31,10 @@ export function AlgorithmsField(props) {
     const [loading, setLoading] = React.useState(false);
     const [allAlgorithms, setAllAlgorithms] = React.useState([]);
     const [loadingAlgorithms, setLoadingAlgorithms] = React.useState(false);
-    const [selectedAlgorithm, setSelectedAlgorithm] = React.useState("");
     const [internalParameters, setInternalParameters] = React.useState({});
     const fetchedRef = React.useRef({});
     const {values, setFieldValue} = props.formikProps || {};
+    const [selectedAlgorithm, setSelectedAlgorithm] = React.useState(values.trainingStrategy.parameters.alg);
 
     const setAlgorithmParameters = React.useCallback(async (params) => {
         const parameters = {};
@@ -100,7 +100,6 @@ export function AlgorithmsField(props) {
 
             const data = await response.json();
             algorithmsCache.list = data;
-            // Store in localStorage
             try {
                 localStorage.setItem('algorithmsCache_list', JSON.stringify(data));
             } catch (error) {
@@ -303,6 +302,7 @@ export function AlgorithmsField(props) {
     return (
         <React.Fragment>
             <FormGroup>
+                <Label>Algorithm</Label>
                 <Input
                     type="select"
                     value={selectedAlgorithm}
@@ -320,7 +320,6 @@ export function AlgorithmsField(props) {
                 </Input>
             </FormGroup>
 
-            {/* Display algorithm parameters if available */}
             {loading ? (
                 <p>Loading parameters...</p>
             ) : values && values.trainingStrategy && values.trainingStrategy.parameters && values.trainingStrategy.parameters.alg ? (

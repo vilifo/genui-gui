@@ -316,7 +316,7 @@ export function EmbeddingsField(props) {
         ? values.trainingStrategy.embeddings[currentIndex].name
         : null;
 
-    const currentEmbeddings = values.trainingStrategy.embeddings || [];
+    const currentEmbeddings = values && values.trainingStrategy.embeddings ? values.trainingStrategy.embeddings : [];
     const availableEmbeddings = [...allEmbeddings.filter(embedding => !currentEmbeddings.some(current => current.name === embedding)),
         currentEmbeddingId];
 
@@ -419,7 +419,6 @@ export function EmbeddingsField(props) {
 }
 
 export function convertEmbeddingsArgumentsObjectsToArrays(data){
-    console.log(data);
     const new_embeddings = [...data?.trainingStrategy?.embeddings];
     const embeddings = data?.trainingStrategy?.embeddings;
 
