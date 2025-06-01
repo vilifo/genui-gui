@@ -8,6 +8,7 @@ const ModelCardNew = (props) => {
   const [algorithm, setAlgorithm] = useState(props.chosenAlgorithm);
 
   const newModelFromFormData = (data) => {
+    console.log(data);
     if (props.prePost) {
       data = props.prePost(data);
     }

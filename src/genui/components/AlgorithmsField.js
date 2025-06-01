@@ -1,93 +1,28 @@
 import React from 'react';
 import {Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
+import {useLocalStorageWithExpiry} from "../../genui";
 // import FieldErrorMessage from './forms/FieldErrorMessage';
 
-const algorithmsCache = {
-    list: null,
-    parameters: {},
-    fetchingList: false,
-};
-
-// Initialize cache from localStorage if available
-try {
-    const storedList = localStorage.getItem('algorithmsCache_list');
-    if (storedList) {
-        algorithmsCache.list = JSON.parse(storedList);
-    }
-
-    const storedParameters = localStorage.getItem('algorithmsCache_parameters');
-    if (storedParameters) {
-        algorithmsCache.parameters = JSON.parse(storedParameters);
-    }
-} catch (error) {
-    console.error("Error reading from localStorage:", error);
-}
-
+const algorithmsListKey = 'algorithmsCache_list';
+const algorithmsParametersKey = 'algorithmsCache_parameters';
 
 export function AlgorithmsField(props) {
     const algorithmPrefix = "trainingStrategy.parameters";
     const currentMode = props.modes[0].name || null;
     const [loading, setLoading] = React.useState(false);
-    const [allAlgorithms, setAllAlgorithms] = React.useState([]);
+    const [allAlgorithms, setAllAlgorithms] = useLocalStorageWithExpiry(algorithmsListKey, [], 24);
+    const [internalParameters, setInternalParameters] = useLocalStorageWithExpiry(algorithmsParametersKey, {}, 24);
     const [loadingAlgorithms, setLoadingAlgorithms] = React.useState(false);
-    const [internalParameters, setInternalParameters] = React.useState({});
-    const fetchedRef = React.useRef({});
     const {values, setFieldValue} = props.formikProps || {};
-    const [selectedAlgorithm, setSelectedAlgorithm] = React.useState(values.trainingStrategy.parameters.alg);
-
-    const setAlgorithmParameters = React.useCallback(async (params) => {
-        const parameters = {};
-        Object.entries(params.parameters || {}).forEach(([paramName, paramValue]) => {
-            parameters[paramName] = paramValue.value;
-        });
-        const updatedParams = {
-            alg: params.alg,
-            parameters: parameters
-        };
-        setFieldValue(`${algorithmPrefix}`, updatedParams);
-        setInternalParameters(params.parameters || {});
-    }, [setFieldValue])
+    const [selectedAlgorithm, setSelectedAlgorithm] = React.useState(values?.trainingStrategy?.parameters?.alg);
+    const fetchedRef = React.useRef({});
 
     const fetchAlgorithms = React.useCallback(async () => {
-        if (!props.apiUrls || !props.apiUrls.qsarRoot) {
-            console.error("API URLs not provided");
+        if (!props.apiUrls?.qsarRoot || allAlgorithms.length > 0) {
             return;
         }
 
-        if (allAlgorithms.length > 0) {
-            return;
-        }
-
-        if (algorithmsCache.list) {
-            setAllAlgorithms(algorithmsCache.list);
-        }
-
-        if (algorithmsCache.fetchingList) {
-            setLoadingAlgorithms(true);
-            const checkCache = () => {
-                if (algorithmsCache.list) {
-                    setAllAlgorithms(algorithmsCache.list);
-                    setLoadingAlgorithms(false);
-                    return true;
-                }
-                if (!algorithmsCache.fetchingList) {
-                    setLoadingAlgorithms(false);
-                    return true;
-                }
-                return false;
-            };
-
-            const intervalId = setInterval(() => {
-                if (checkCache()) {
-                    clearInterval(intervalId);
-                }
-            }, 100);
-
-            return;
-        }
-
-        algorithmsCache.fetchingList = true;
         setLoadingAlgorithms(true);
         try {
             const url = new URL(`models/qsprpred/sklearn/mode/${currentMode}/`, props.apiUrls.qsarRoot);
@@ -99,12 +34,6 @@ export function AlgorithmsField(props) {
             }
 
             const data = await response.json();
-            algorithmsCache.list = data;
-            try {
-                localStorage.setItem('algorithmsCache_list', JSON.stringify(data));
-            } catch (error) {
-                console.error("Error storing algorithms list in localStorage:", error);
-            }
             setAllAlgorithms(data);
         } catch (error) {
             console.error("Error fetching algorithms:", error);
@@ -114,83 +43,71 @@ export function AlgorithmsField(props) {
     }, [props.apiUrls, allAlgorithms.length, setAllAlgorithms, currentMode]);
 
     const fetchAlgorithmParameters = React.useCallback(async (alg_name) => {
-        if (!alg_name) return;
-        if (!props.apiUrls || !props.apiUrls.qsarRoot) {
-            console.error("API URLs not provided");
+        if (!alg_name || !props.apiUrls?.qsarRoot) {
             return;
-        }
-
-        if (fetchedRef.current[alg_name]) {
-            return;
-        }
-
-        if (algorithmsCache.parameters[alg_name]) {
-            const parameters = {alg: alg_name, parameters: algorithmsCache.parameters[alg_name]};
-            setAlgorithmParameters(parameters);
         }
 
         setLoading(true);
-        try {
-            const url = new URL(`models/qsprpred/sklearn/${alg_name}/params`, props.apiUrls.qsarRoot);
-            const response = await fetch(url.toString(), {
-                credentials: "include",
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch algorithm parameters: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            fetchedRef.current[alg_name] = true;
-            setAlgorithmParameters({alg: alg_name, parameters: data});
-            algorithmsCache.parameters[alg_name] = data;
+        if (!internalParameters?.[alg_name]) {
             try {
-                localStorage.setItem('algorithmsCache_parameters', JSON.stringify(algorithmsCache.parameters));
-            } catch (error) {
-                console.error("Error storing algorithm parameters in localStorage:", error);
-            }
+                const url = new URL(`models/qsprpred/sklearn/${alg_name}/params`, props.apiUrls.qsarRoot);
+                const response = await fetch(url.toString(), {
+                    credentials: "include",
+                });
 
-        } catch (error) {
-            console.error("Error fetching algorithm parameters:", error);
-        } finally {
-            setLoading(false);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch algorithm parameters: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                fetchedRef.current[alg_name] = true;
+                const updatedParams = internalParameters;
+                updatedParams[alg_name] = data;
+                setInternalParameters(updatedParams);
+            } catch (error) {
+                console.error("Error fetching algorithm parameters:", error);
+            }
         }
-    }, [props.apiUrls, setAlgorithmParameters]);
+        if (internalParameters?.[alg_name] && setFieldValue) {
+            const params = Object.fromEntries(
+                Object.entries(internalParameters[alg_name]).map(
+                    ([key, value]) => [key, value.value]));
+            const newParameters = {alg: alg_name, parameters: params};
+            setFieldValue(algorithmPrefix, newParameters);
+        }
+        setLoading(false);
+    }, [props.apiUrls, setInternalParameters, internalParameters, setFieldValue]);
 
     const handleAlgorithmChange = (event) => {
         const selectedAlgorithmId = event.target.value;
-
         setSelectedAlgorithm(selectedAlgorithmId);
-        setAlgorithmParameters({
+        setFieldValue(`${algorithmPrefix}.parameters`, {
             alg: selectedAlgorithmId,
-            parameters: algorithmsCache.parameters[selectedAlgorithmId] || {}
+            parameters: {}
         });
-
-        if (selectedAlgorithmId && !algorithmsCache.parameters[selectedAlgorithmId]) {
-            fetchedRef.current[selectedAlgorithmId] = false;
-        }
-
+        fetchedRef.current[selectedAlgorithmId] = false;
         fetchAlgorithmParameters(selectedAlgorithmId);
     };
 
     const renderParamInput = (paramName, paramValue) => {
-        const constraint = internalParameters[paramName] ? internalParameters[paramName].constraint : [];
+        const currentParameters = internalParameters && internalParameters[selectedAlgorithm] ? internalParameters[selectedAlgorithm] : {};
+        const constraint = currentParameters && currentParameters[paramName] ? currentParameters[paramName].constraint : [];
         const type = constraint ? constraint.type : null;
 
         const validateInterval = (x) => {
-            if (!Number.parseFloat(x)){
+            if (!Number.parseFloat(x)) {
                 return "This field must be a number.";
-            } else if (! Number.parseInt(x) && type === "int"){
+            } else if (!Number.parseInt(x) && type === "int") {
                 return "This field must be an integer.";
             } else {
-                if (constraint.min){
+                if (constraint.min) {
                     if (x <= constraint.min && constraint.leq === "b") {
                         return `This field must be greater than ${constraint.min}.`;
                     } else if (x < constraint && constraint.leq === "bq") {
                         return `This field must be greater than or equal to ${constraint.min}.`;
                     }
                 }
-                if (constraint.max){
+                if (constraint.max) {
                     if (x >= constraint.max && constraint.geq === "s") {
                         return `This field must be less than ${constraint.max}.`;
                     } else if (x > constraint && constraint.geq === "sq") {
@@ -199,7 +116,7 @@ export function AlgorithmsField(props) {
                 }
             }
         }
-        if (type === null){
+        if (type === null) {
             return null;
         } else if (type === "int" || type === "float") {
             return (
@@ -211,8 +128,8 @@ export function AlgorithmsField(props) {
                             type="number"
                             validate={validateInterval}
                             as={Input}
-                            {...constraint.min? {min: constraint.min} : {}}
-                            {...constraint.max? {max: constraint.max} : {}}
+                            {...constraint.min ? {min: constraint.min} : {}}
+                            {...constraint.max ? {max: constraint.max} : {}}
                         />
                     </Col>
                 </div>
@@ -286,18 +203,6 @@ export function AlgorithmsField(props) {
     React.useEffect(() => {
         fetchAlgorithms();
     }, [fetchAlgorithms]);
-
-    React.useEffect(() => {
-        if (selectedAlgorithm) {
-            fetchAlgorithmParameters(selectedAlgorithm);
-        }
-    }, [selectedAlgorithm, fetchAlgorithmParameters]);
-
-    React.useEffect(() => {
-        if (props.onChange) {
-            props.onChange(values[`${algorithmPrefix}.parameters`] || {});
-        }
-    }, [props.onChange, values, props]);
 
     return (
         <React.Fragment>

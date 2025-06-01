@@ -1,7 +1,10 @@
 import React from 'react';
 import {Button, Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
-import {FieldErrorMessage, EmbeddingsField, AlgorithmsField} from '../../../genui';
+import {FieldErrorMessage, EmbeddingsField, AlgorithmsField, useLocalStorageWithExpiry} from '../../../genui';
+
+const dataSplitsCacheKey = 'qsarDataSplitsCache';
+const dataSplitsParametersCacheKey = 'qsarDataSplitParametersCache';
 
 export function PredictionsFields(props) {
     return (
@@ -108,8 +111,8 @@ export function QSARValidationStrategies(props) {
     const [loading, setLoading] = React.useState(false);
     const fetchedRef = React.useRef({});
     const [loadingDataSplits, setLoadingDataSplits] = React.useState(false);
-    const [allDataSplits, setAllDataSplits] = React.useState(props.allDataSplits || []);
-    const [dataSplitParameters, setDataSplitParameters] = React.useState([]);
+    const [allDataSplits, setAllDataSplits] = useLocalStorageWithExpiry(dataSplitsCacheKey, []);
+    const [dataSplitsParameters, setDataSplitsParameters] = useLocalStorageWithExpiry(dataSplitsParametersCacheKey, {});
     const {values, setFieldValue} = props.formikProps || {};
     const metrics = props.metrics;
 
@@ -120,7 +123,7 @@ export function QSARValidationStrategies(props) {
             const defaultDataSplit = allDataSplits && allDataSplits.length > 0 ? allDataSplits[0] : null;
             setFieldValue('validationStrategies', [
                 ...currentValidationStrategies,
-                {cvFolds: 3, metrics: defaultMetric, dataSplit: defaultDataSplit}
+                {cvFolds: 3, metrics: defaultMetric, dataSplit: {name: defaultDataSplit}}
             ]);
         }
     };
@@ -164,12 +167,37 @@ export function QSARValidationStrategies(props) {
 
     const fetchDataSplitParameters = React.useCallback(async (dataSplitName) => {
         if (!dataSplitName) return;
-        if (!props.apiUrls || !props.apiUrls.qsarRoot) {
-            console.error("API URLs not provided");
+        if (!props.apiUrls || !props.apiUrls.qsarRoot || fetchedRef.current[dataSplitName]) {
             return;
         }
 
-        if (fetchedRef.current[dataSplitName]) {
+        const processParameters = (data) => {
+            const params = Object.fromEntries(
+                Object.entries(data).map(
+                    ([key, value]) => [key, value.value]));
+            params["name"] = dataSplitName;
+            return params;
+        }
+
+        const setDataSplitParameters = (data) => {
+            fetchedRef.current[dataSplitName] = true;
+            if (values && setFieldValue) {
+                const currentValidationStrategies = values.validationStrategies || [];
+                const index = currentIndex;
+                if (index !== null && index >= 0 && index < currentValidationStrategies.length) {
+                    const updatedDataSplit = processParameters(data);
+                    const updatedValidationStrategies = [...currentValidationStrategies];
+                    updatedValidationStrategies[index] = {
+                        ...updatedValidationStrategies[index],
+                        dataSplit: updatedDataSplit
+                    };
+                    setFieldValue('validationStrategies', updatedValidationStrategies);
+                }
+            }
+        }
+
+        if (dataSplitsParameters[dataSplitName]) {
+            setDataSplitParameters(dataSplitsParameters[dataSplitName]);
             return;
         }
 
@@ -185,49 +213,19 @@ export function QSARValidationStrategies(props) {
             }
 
             const data = await response.json();
-            setDataSplitParameters({name: dataSplitName, ...data});
-            fetchedRef.current[dataSplitName] = true;
-
-            if (values && setFieldValue) {
-                const currentValidationStrategies = values.validationStrategies || [];
-                const index = currentIndex;
-                if (index !== null && index >= 0 && index < currentValidationStrategies.length) {
-                    const updatedDataSplit = {name: dataSplitName};
-                    Object.entries(data).forEach(([paramName, paramValue]) => (
-                        updatedDataSplit[paramName] = paramValue.value
-                    ));
-                    const updatedValidationStrategies = [...currentValidationStrategies];
-                    updatedValidationStrategies[index] = {
-                        ...updatedValidationStrategies[index],
-                        dataSplit: updatedDataSplit
-                    };
-                    setFieldValue('validationStrategies', updatedValidationStrategies);
-                }
-            }
+            const updatedDataSplitsParameters = {...dataSplitsParameters};
+            updatedDataSplitsParameters[dataSplitName] = data;
+            setDataSplitsParameters(updatedDataSplitsParameters);
+            setDataSplitParameters(updatedDataSplitsParameters[dataSplitName]);
         } catch (error) {
             console.error("Error fetching data split params:", error);
         } finally {
             setLoading(false);
         }
-    }, [props.apiUrls, values, setFieldValue, currentIndex]);
+    }, [props.apiUrls, values, setFieldValue, currentIndex, dataSplitsParameters, setDataSplitsParameters]);
 
     const handleDataSplitChange = (event) => {
         const selectedDataSplitId = event.target.value;
-
-        if (values && setFieldValue) {
-            const currentValidationStrategies = values.validationStrategies || [];
-            const index = currentIndex;
-            if (index !== null && index >= 0 && index < currentValidationStrategies.length) {
-                const updatedDataSplit = {name: selectedDataSplitId};
-                const updatedValidationStrategies = [...currentValidationStrategies];
-                updatedValidationStrategies[index] = {
-                    ...updatedValidationStrategies[index],
-                    dataSplit: updatedDataSplit
-                };
-                setFieldValue('validationStrategies', updatedValidationStrategies);
-            }
-        }
-
         if (selectedDataSplitId) {
             fetchedRef.current[selectedDataSplitId] = false;
         }
@@ -236,8 +234,10 @@ export function QSARValidationStrategies(props) {
     };
 
     const renderParamInput = (paramName, paramValue) => {
-        const type = dataSplitParameters[paramName] ? dataSplitParameters[paramName].type : null;
-        if (paramName === "name") {
+        const currentDataSplitName = values?.validationStrategies?.[currentIndex]?.dataSplit.name;
+        const currentDataSplit = dataSplitsParameters?.[currentDataSplitName];
+        const type = currentDataSplit?.[paramName] ? currentDataSplit[paramName].type : null;
+        if (paramName === "name" || paramValue === null || paramValue === undefined) {
             return null;
         } else if (paramName === "scaffold") {
             return (
@@ -302,12 +302,11 @@ export function QSARValidationStrategies(props) {
                     </Col>
                 </FormGroup>
                 <FieldErrorMessage name={`${validationStrategyPrefix}.dataSplit`}/>
-                {/* Display embedding parameters if available */}
                 {loading ? (
                     <p>Loading parameters...</p>
                 ) : values && values.validationStrategies && currentIndex !== null ? (
                     <div className="mt-3">
-                        <h5>Parameters</h5>
+                        <h5>Data split parameters</h5>
                         <div className='p-3 border rounded' style={{maxHeight: '250px', overflowY: 'auto'}}>
                             {values.validationStrategies[currentIndex].dataSplit &&
                                 Object.entries(values.validationStrategies[currentIndex].dataSplit).map(([paramName, paramValue]) => (
@@ -374,7 +373,6 @@ export function QSARValidationStrategies(props) {
                                 {...props}
                                 validationStrategyPrefix={`validationStrategy[${index}]`}
                                 formikProps={props.formikProps}
-                                allDataSplits={allDataSplits}
                             />
                         </div>
                     </div>

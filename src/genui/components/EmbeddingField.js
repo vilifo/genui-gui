@@ -2,33 +2,18 @@ import React from 'react';
 import {Button, Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
 import FieldErrorMessage from './forms/FieldErrorMessage';
+import useLocalStorageWithExpiry from "./LocalStorageWithExpiry";
 
-const embeddingsCache = {
-    list: null,
-    arguments: {},
-    fetchingList: false,
-    fetchingArguments: {}
-};
-
-try {
-    const storedList = localStorage.getItem('embeddingsCache_list');
-    if (storedList) {
-        embeddingsCache.list = JSON.parse(storedList);
-    }
-
-    const storedArguments = localStorage.getItem('embeddingsCache_arguments');
-    if (storedArguments) {
-        embeddingsCache.arguments = JSON.parse(storedArguments);
-    }
-} catch (error) {
-    console.error("Error reading from localStorage:", error);
-}
+const embeddingsListKey = 'embeddingsCache_list';
+const embeddingsArgumentsKey = 'embeddingsCache_arguments';
+const fetchingArguments = {};
 
 export function EmbeddingsField(props) {
     const embeddingPrefix = props.embeddingPrefix;
     const currentIndex = embeddingPrefix ? parseInt(embeddingPrefix.split('[')[1].split(']')[0]) : null;
     const [loading, setLoading] = React.useState(false);
-    const [allEmbeddings, setAllEmbeddings] = React.useState(props.allEmbeddings || []);
+    const [allEmbeddings, setAllEmbeddings] = useLocalStorageWithExpiry(embeddingsListKey, [], 24);
+    const [embeddingsArguments, setEmbeddingsArguments] = useLocalStorageWithExpiry(embeddingsArgumentsKey, {}, 24);
     const [loadingEmbeddings, setLoadingEmbeddings] = React.useState(false);
     const {values, setFieldValue} = props.formikProps || {};
     const fetchedRef = React.useRef({});
@@ -42,7 +27,7 @@ export function EmbeddingsField(props) {
             }
             setFieldValue('trainingStrategy.embeddings', [
                 ...currentEmbeddings,
-                {name: availableEmbeddings[0], arguments: {}}
+                {name: availableEmbeddings[0], arguments: embeddingsArguments[availableEmbeddings[0]]}
             ]);
         }
     };
@@ -65,36 +50,6 @@ export function EmbeddingsField(props) {
             return;
         }
 
-        if (embeddingsCache.list) {
-            setAllEmbeddings(embeddingsCache.list);
-            return;
-        }
-
-        if (embeddingsCache.fetchingList) {
-            setLoadingEmbeddings(true);
-            const checkCache = () => {
-                if (embeddingsCache.list) {
-                    setAllEmbeddings(embeddingsCache.list);
-                    setLoadingEmbeddings(false);
-                    return true;
-                }
-                if (!embeddingsCache.fetchingList) {
-                    setLoadingEmbeddings(false);
-                    return true;
-                }
-                return false;
-            };
-
-            const intervalId = setInterval(() => {
-                if (checkCache()) {
-                    clearInterval(intervalId);
-                }
-            }, 100);
-
-            return;
-        }
-
-        embeddingsCache.fetchingList = true;
         setLoadingEmbeddings(true);
         try {
             const url = new URL('embeddings/list/', props.apiUrls.qsarRoot);
@@ -107,18 +62,10 @@ export function EmbeddingsField(props) {
             }
 
             const data = await response.json();
-            embeddingsCache.list = data;
-            // Store in localStorage
-            try {
-                localStorage.setItem('embeddingsCache_list', JSON.stringify(data));
-            } catch (error) {
-                console.error("Error storing embeddings list in localStorage:", error);
-            }
             setAllEmbeddings(data);
         } catch (error) {
             console.error("Error fetching embeddings:", error);
         } finally {
-            embeddingsCache.fetchingList = false;
             setLoadingEmbeddings(false);
         }
     }, [props.apiUrls, allEmbeddings.length, setAllEmbeddings]);
@@ -132,13 +79,12 @@ export function EmbeddingsField(props) {
 
         const setArguments = (data) => {
             fetchedRef.current[emb_name] = true;
-
             if (values && setFieldValue) {
                 const currentEmbeddings = values.trainingStrategy.embeddings || [];
                 const index = currentIndex;
                 if (index !== null && index >= 0 && index < currentEmbeddings.length) {
                     const updatedEmbedding = {
-                        ...currentEmbeddings[index],
+                        name: emb_name,
                         arguments: data
                     };
                     const updatedEmbeddings = [...currentEmbeddings];
@@ -164,20 +110,15 @@ export function EmbeddingsField(props) {
             return processedData;
         };
 
-        if (embeddingsCache.arguments[emb_name]) {
-            setArguments(embeddingsCache.arguments[emb_name]);
+        if (embeddingsArguments[emb_name]) {
+            setArguments(embeddingsArguments[emb_name]);
             return;
         }
 
-        if (embeddingsCache.fetchingArguments[emb_name]) {
+        if (fetchingArguments[emb_name]) {
             setLoading(true);
             const checkCache = () => {
-                if (embeddingsCache.arguments[emb_name]) {
-                    setArguments(embeddingsCache.arguments[emb_name]);
-                    setLoading(false);
-                    return true;
-                }
-                if (!embeddingsCache.fetchingArguments[emb_name]) {
+                if (!embeddingsArguments[emb_name]) {
                     setLoading(false);
                     return true;
                 }
@@ -193,7 +134,7 @@ export function EmbeddingsField(props) {
             return;
         }
 
-        embeddingsCache.fetchingArguments[emb_name] = true;
+        fetchingArguments[emb_name] = true;
         setLoading(true);
         try {
             const url = new URL(`embeddings/${emb_name}/arguments`, props.apiUrls.qsarRoot);
@@ -207,21 +148,17 @@ export function EmbeddingsField(props) {
 
             let data = await response.json();
             data = processArguments(data);
-            embeddingsCache.arguments[emb_name] = data;
-            // Store in localStorage
-            try {
-                localStorage.setItem('embeddingsCache_arguments', JSON.stringify(embeddingsCache.arguments));
-            } catch (error) {
-                console.error("Error storing embedding arguments in localStorage:", error);
-            }
+            const updateEmbeddingsArguments = {...embeddingsArguments};
+            updateEmbeddingsArguments[emb_name] = data;
+            setEmbeddingsArguments(updateEmbeddingsArguments);
             setArguments(data);
         } catch (error) {
             console.error("Error fetching embedding arguments:", error);
         } finally {
-            embeddingsCache.fetchingArguments[emb_name] = false;
+            fetchingArguments[emb_name] = false;
             setLoading(false);
         }
-    }, [props.apiUrls, values, setFieldValue, currentIndex]);
+    }, [props.apiUrls, values, setFieldValue, currentIndex, embeddingsArguments, setEmbeddingsArguments]);
 
     const handleEmbeddingChange = (event) => {
         const selectedEmbeddingId = event.target.value;
@@ -230,16 +167,13 @@ export function EmbeddingsField(props) {
             const currentEmbeddings = values.trainingStrategy.embeddings || [];
             const index = currentIndex;
             if (index !== null && index >= 0 && index < currentEmbeddings.length) {
-                const updatedEmbedding = {name: selectedEmbeddingId, arguments: {}};
+                const updatedEmbedding = {
+                    name: selectedEmbeddingId,
+                    arguments: embeddingsArguments[selectedEmbeddingId] || {}
+                };
                 const updatedEmbeddings = [...currentEmbeddings];
                 updatedEmbeddings[index] = updatedEmbedding;
                 setFieldValue('trainingStrategy.embeddings', updatedEmbeddings);
-            }
-        }
-
-        if (selectedEmbeddingId) {
-            if (!embeddingsCache.arguments[selectedEmbeddingId]) {
-                fetchedRef.current[selectedEmbeddingId] = false;
             }
         }
         fetchEmbeddingArguments(selectedEmbeddingId);
@@ -300,7 +234,7 @@ export function EmbeddingsField(props) {
                     ))}
                 </div>
             );
-        } else {
+        } else if (values.trainingStrategy.embeddings[currentIndex].arguments[paramName] !== null) {
             return (
                 <div>
                     <Label>{paramName}</Label>
@@ -309,6 +243,8 @@ export function EmbeddingsField(props) {
                     </Col>
                 </div>
             );
+        } else {
+            return null;
         }
     };
 
@@ -329,12 +265,12 @@ export function EmbeddingsField(props) {
 
     React.useEffect(() => {
         if (currentEmbeddingId) {
-            if (embeddingsCache.arguments[currentEmbeddingId] && fetchedRef.current[currentEmbeddingId]) {
+            if (embeddingsArguments[currentEmbeddingId] && fetchedRef.current[currentEmbeddingId]) {
                 return;
             }
             fetchEmbeddingArguments(currentEmbeddingId);
         }
-    }, [currentEmbeddingId, fetchEmbeddingArguments]);
+    }, [embeddingsArguments, currentEmbeddingId, fetchEmbeddingArguments]);
 
     if (embeddingPrefix && embeddingPrefix.includes('[')) {
         return (
@@ -418,13 +354,13 @@ export function EmbeddingsField(props) {
     );
 }
 
-export function convertEmbeddingsArgumentsObjectsToArrays(data){
+export function convertEmbeddingsArgumentsObjectsToArrays(data) {
     const new_embeddings = [...data?.trainingStrategy?.embeddings];
     const embeddings = data?.trainingStrategy?.embeddings;
 
     embeddings.forEach(function (embedding, index) {
         const name = embedding.name;
-        const new_arguments= {};
+        const new_arguments = {};
         Object.entries(embedding.arguments).forEach(([key, value]) => {
             if (typeof value === "object") {
                 let new_items = [];

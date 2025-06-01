@@ -140,6 +140,7 @@ export default function QSARModelCreateCard(props) {
                 return values;
             }}
             prePost={(data) => {
+                console.log('Pre-Post', data);
                 if (data.predictionsUnits === "") {
                     data.predictionsUnits = null;
                 }

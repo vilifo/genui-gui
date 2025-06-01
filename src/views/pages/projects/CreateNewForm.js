@@ -17,6 +17,7 @@ export function CreateNewForm(props) {
         .max(10000, 'Description must be 10,000 characters or less'),
     }),
     onSubmit: values => {
+      console.log(values);
       props.handleCreate(values);
     },
   });
