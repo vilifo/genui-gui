@@ -147,7 +147,7 @@ function FormikModelForm(props) {
                                     validationStrategiesFields ?
                                         React.createElement(validationStrategiesFields, {
                                             ...props,
-                                            validationStrategyPrefix: validationStrategiesPrefix,
+                                            validationStrategiesPrefix: validationStrategiesPrefix,
                                             formikProps: formik
                                         }) : null
                                 }

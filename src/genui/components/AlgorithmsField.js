@@ -1,8 +1,7 @@
 import React from 'react';
 import {Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
-import {useLocalStorageWithExpiry} from "../../genui";
-// import FieldErrorMessage from './forms/FieldErrorMessage';
+import {FieldErrorMessage, useLocalStorageWithExpiry} from "../../genui";
 
 const algorithmsListKey = 'algorithmsCache_list';
 const algorithmsParametersKey = 'algorithmsCache_parameters';
@@ -60,7 +59,6 @@ export function AlgorithmsField(props) {
                 }
 
                 const data = await response.json();
-                fetchedRef.current[alg_name] = true;
                 const updatedParams = internalParameters;
                 updatedParams[alg_name] = data;
                 setInternalParameters(updatedParams);
@@ -75,6 +73,7 @@ export function AlgorithmsField(props) {
             const newParameters = {alg: alg_name, parameters: params};
             setFieldValue(algorithmPrefix, newParameters);
         }
+        fetchedRef.current[alg_name] = true;
         setLoading(false);
     }, [props.apiUrls, setInternalParameters, internalParameters, setFieldValue]);
 
@@ -86,7 +85,6 @@ export function AlgorithmsField(props) {
             parameters: {}
         });
         fetchedRef.current[selectedAlgorithmId] = false;
-        fetchAlgorithmParameters(selectedAlgorithmId);
     };
 
     const renderParamInput = (paramName, paramValue) => {
@@ -103,14 +101,14 @@ export function AlgorithmsField(props) {
                 if (constraint.min) {
                     if (x <= constraint.min && constraint.leq === "b") {
                         return `This field must be greater than ${constraint.min}.`;
-                    } else if (x < constraint && constraint.leq === "bq") {
+                    } else if (x < constraint.min && constraint.leq === "bq") {
                         return `This field must be greater than or equal to ${constraint.min}.`;
                     }
                 }
                 if (constraint.max) {
                     if (x >= constraint.max && constraint.geq === "s") {
                         return `This field must be less than ${constraint.max}.`;
-                    } else if (x > constraint && constraint.geq === "sq") {
+                    } else if (x > constraint.max && constraint.geq === "sq") {
                         return `This field must be less than or equal to ${constraint.max}.`;
                     }
                 }
@@ -131,23 +129,28 @@ export function AlgorithmsField(props) {
                             {...constraint.min ? {min: constraint.min} : {}}
                             {...constraint.max ? {max: constraint.max} : {}}
                         />
+                        <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`} />
                     </Col>
                 </div>
             );
         } else if (type === "bool") {
             return (
                 <div key={paramName} className="form-check" style={{margin: '5px'}}>
-                    <input
-                        type="checkbox"
-                        className="form-check-input"
-                        id={`${algorithmPrefix}-parameters-${paramName}`}
-                        value={paramName}
-                        checked={paramValue || false}
-                        onChange={(e) => setFieldValue(`${algorithmPrefix}.parameters.${paramName}`, e.target.checked)}
-                    />
+                    <Field>
+                        {({ field }) => (
+                            <input
+                                {...field}
+                                type="checkbox"
+                                className="form-check-input"
+                                id={`${algorithmPrefix}-parameters-${paramName}`}
+                                checked={field.value || false}
+                            />
+                        )}
+                    </Field>
                     <label className="form-check-label" htmlFor={`${algorithmPrefix}-parameters-${paramName}`}>
                         {paramName}
                     </label>
+                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`} />
                 </div>
             );
         } else if (type === "str") {
@@ -168,6 +171,7 @@ export function AlgorithmsField(props) {
                             </option>
                         ))}
                     </Field>
+                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`} />
                 </div>
             );
         } else if (Number.parseInt(paramValue) || Number.parseFloat(paramValue)) {
@@ -180,6 +184,7 @@ export function AlgorithmsField(props) {
                             as={Input}
                             type="number"
                         />
+                        <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`} />
                     </Col>
                 </div>
             );
@@ -195,6 +200,7 @@ export function AlgorithmsField(props) {
                         onChange={(e) => setFieldValue(`${algorithmPrefix}.parameters.${paramName}`, e.target.value)}
                     >
                     </Field>
+                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`} />
                 </div>
             );
         }
@@ -204,12 +210,20 @@ export function AlgorithmsField(props) {
         fetchAlgorithms();
     }, [fetchAlgorithms]);
 
+    React.useEffect(() => {
+        if (selectedAlgorithm && !fetchedRef.current[selectedAlgorithm]) {
+            fetchAlgorithmParameters(selectedAlgorithm);
+        }
+    }, [selectedAlgorithm, fetchAlgorithmParameters]);
+
     return (
         <React.Fragment>
             <FormGroup>
                 <Label>Algorithm</Label>
-                <Input
+                <Field
+                    as={Input}
                     type="select"
+                    name={`${algorithmPrefix}.parameters.alg`}
                     value={selectedAlgorithm}
                     onChange={handleAlgorithmChange}
                     disabled={loadingAlgorithms}
@@ -222,7 +236,8 @@ export function AlgorithmsField(props) {
                             <option key={alg} value={alg}>{alg}</option>
                         ))
                     )}
-                </Input>
+                </Field>
+                <FieldErrorMessage name={`${algorithmPrefix}.parameters.alg`} />
             </FormGroup>
 
             {loading ? (

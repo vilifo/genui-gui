@@ -217,16 +217,21 @@ export function EmbeddingsField(props) {
                 <div className="mt-2">
                     {Object.entries(paramValue).map(([key, value]) => (
                         <div key={key} className="form-check" style={{margin: '5px'}}>
-                            <input
-                                type="checkbox"
-                                className="form-check-input"
-                                id={`${embeddingPrefix}-${paramName}-${key}`}
-                                value={key}
-                                checked={value}
-                                onChange={(e) => {
-                                    handleListItemChange(paramName, key, e.target.checked);
-                                }}
-                            />
+                            <Field>
+                                {({ field }) => (
+                                    <input
+                                        {...field}
+                                        type="checkbox"
+                                        className="form-check-input"
+                                        id={`${embeddingPrefix}-${paramName}-${key}`}
+                                        checked={field.value}
+                                        onChange={(e) => {
+                                            handleListItemChange(paramName, key, e.target.checked);
+                                        }}
+                                    />
+                                )}
+                            </Field>
+                            <FieldErrorMessage name={`${embeddingPrefix}.arguments.${paramName}`}/>
                             <label className="form-check-label" htmlFor={`${embeddingPrefix}-${paramName}-${key}`}>
                                 {key}
                             </label>
@@ -240,6 +245,7 @@ export function EmbeddingsField(props) {
                     <Label>{paramName}</Label>
                     <Col sm={8}>
                         <Field name={`${embeddingPrefix}.arguments.${paramName}`} as={Input} type="number"/>
+                        <FieldErrorMessage name={`${embeddingPrefix}.arguments.${paramName}`}/>
                     </Col>
                 </div>
             );

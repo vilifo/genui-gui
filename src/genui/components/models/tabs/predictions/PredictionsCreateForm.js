@@ -29,8 +29,6 @@ function PredictionsCreateForm(props) {
       onSubmit={
         (values) => {
           setIsSubmitting(true);
-          console.log('Creating predictions with data:', values);
-          console.log('Predictions creation URL:', props.predictionsListUrl);
           fetch(
             props.predictionsListUrl
             , {

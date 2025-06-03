@@ -43,10 +43,10 @@ export default function QSARModelCreateCard(props) {
 
     const trainingStrategySchema = {
         activityThreshold: Yup.number().min(0, 'Activity threshold must be zero or positive.').required('Activity threshold is a required parameter.'),
-        embeddings: Yup.array().of(Yup.object().shape({name:Yup.string(), arguments:Yup.mixed().nullable()})).required('You need to supply one or more descriptor sets for training.'),
+        embeddings: Yup.array().of(Yup.object().shape({name:Yup.string(), arguments:Yup.object()})).required('You need to supply one or more descriptor sets for training.'),
         parameters: Yup.object().shape({
             alg: Yup.string().required('You need to select an algorithm.'),
-            parameters: Yup.object().nullable()
+            parameters: Yup.object()
         }).required()
     };
     const validationStrategiesSchema = Yup.array().of(
@@ -140,11 +140,23 @@ export default function QSARModelCreateCard(props) {
                 return values;
             }}
             prePost={(data) => {
-                console.log('Pre-Post', data);
                 if (data.predictionsUnits === "") {
                     data.predictionsUnits = null;
                 }
                 data = convertEmbeddingsArgumentsObjectsToArrays(data);
+                data.trainingStrategy.parameters = {
+                    alg:data.trainingStrategy.parameters.alg,
+                    parameters:JSON.stringify(data.trainingStrategy.parameters.parameters)
+                };
+                if (data.validationStrategies && data.validationStrategies.length > 0) {
+                    const updatedValidationStrategies = [];
+                    data.validationStrategies.forEach((vs) => {
+                        vs["resourcetype"] =  "BasicValidationStrategy";
+                        updatedValidationStrategies.push(vs);
+                    });
+                    delete data.validationStrategies;
+                    data.trainingStrategy["validationStrategies"] = updatedValidationStrategies;
+                }
                 return data;
             }}
         />

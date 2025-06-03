@@ -75,8 +75,7 @@ const ModelCardNew = (props) => {
   };
 
   const postModelData = (data, afterModelPOST) => {
-    console.log('Creating model with data:', data);
-    console.log('Model creation URL:', props.listURL);
+    console.log(data);
     fetch(
       props.listURL
       , {

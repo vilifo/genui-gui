@@ -106,8 +106,8 @@ export function QSARTrainingFields(props) {
 }
 
 export function QSARValidationStrategies(props) {
-    const validationStrategyPrefix = props.validationStrategyPrefix;
-    const currentIndex = validationStrategyPrefix?.match(/\[(\d+)]/)?.at(1) ? parseInt(validationStrategyPrefix.match(/\[(\d+)]/)[1]) : null;
+    const validationStrategiesPrefix = props.validationStrategiesPrefix;
+    const currentIndex = validationStrategiesPrefix?.match(/\[(\d+)]/)?.at(1) ? parseInt(validationStrategiesPrefix.match(/\[(\d+)]/)[1]) : null;
     const [loading, setLoading] = React.useState(false);
     const fetchedRef = React.useRef({});
     const [loadingDataSplits, setLoadingDataSplits] = React.useState(false);
@@ -242,22 +242,24 @@ export function QSARValidationStrategies(props) {
         } else if (paramName === "scaffold") {
             return (
                 <FormGroup row>
-                    <Label htmlFor={`${validationStrategyPrefix}.scaffold`} sm={4}>Scaffold</Label>
+                    <Label htmlFor={`${validationStrategiesPrefix}.scaffold`} sm={4}>Scaffold</Label>
                     <Col sm={8}>
-                        <Field name={`${validationStrategyPrefix}.scaffold`} as={Input} type="text" value={paramValue}/>
+                        <Field name={`${validationStrategiesPrefix}.scaffold`} as={Input} type="text" value={paramValue}/>
+                        <FieldErrorMessage name={`${validationStrategiesPrefix}.scaffold`}/>
                     </Col>
                 </FormGroup>
             );
         } else if (type === "int" || type === "float") {
             return (
                 <FormGroup row>
-                    <Label htmlFor={`${validationStrategyPrefix}.${paramName}`} sm={4}>{paramName}</Label>
+                    <Label htmlFor={`${validationStrategiesPrefix}.${paramName}`} sm={4}>{paramName}</Label>
                     <Col sm={8}>
-                        <Field name={`${validationStrategyPrefix}.dataSplit.${paramName}`}
+                        <Field name={`${validationStrategiesPrefix}.dataSplit.${paramName}`}
                                as={Input}
                                type="number"
                                value={paramValue}
                         />
+                        <FieldErrorMessage name={`${validationStrategiesPrefix}.dataSplit.${paramName}`}/>
                     </Col>
                 </FormGroup>
             );
@@ -278,14 +280,14 @@ export function QSARValidationStrategies(props) {
         }
     }, [currentDataSplitId, fetchDataSplitParameters]);
 
-    if (validationStrategyPrefix && validationStrategyPrefix.includes('[')) {
+    if (validationStrategiesPrefix && validationStrategiesPrefix.includes('[')) {
         return (
             <React.Fragment>
                 <FormGroup>
-                    <Label htmlFor={`${validationStrategyPrefix}.dataSplit`} sm={4}>Data Split</Label>
+                    <Label htmlFor={`${validationStrategiesPrefix}.dataSplit`} sm={4}>Data Split</Label>
                     <Col sm={8}>
                         <Field
-                            name={`${validationStrategyPrefix}.dataSplit`}
+                            name={`${validationStrategiesPrefix}.dataSplit`}
                             as={Input}
                             type="select"
                             onChange={handleDataSplitChange}
@@ -301,7 +303,7 @@ export function QSARValidationStrategies(props) {
                         </Field>
                     </Col>
                 </FormGroup>
-                <FieldErrorMessage name={`${validationStrategyPrefix}.dataSplit`}/>
+                <FieldErrorMessage name={`${validationStrategiesPrefix}.dataSplit`}/>
                 {loading ? (
                     <p>Loading parameters...</p>
                 ) : values && values.validationStrategies && currentIndex !== null ? (
@@ -321,22 +323,22 @@ export function QSARValidationStrategies(props) {
                     <p>No arguments available for this data split.</p>
                 )}
                 <FormGroup row>
-                    <Label htmlFor={`${validationStrategyPrefix}.cvFolds`} sm={4}>Cross-Validation Folds</Label>
+                    <Label htmlFor={`${validationStrategiesPrefix}.cvFolds`} sm={4}>Cross-Validation Folds</Label>
                     <Col sm={8}>
-                        <Field name={`${validationStrategyPrefix}.cvFolds`}
+                        <Field name={`${validationStrategiesPrefix}.cvFolds`}
                                as={Input}
                                value={values.validationStrategies[currentIndex]?.cvFolds || 3}
                                type="number"/>
                     </Col>
                 </FormGroup>
-                <FieldErrorMessage name={`${validationStrategyPrefix}.cvFolds`}/>
+                <FieldErrorMessage name={`${validationStrategiesPrefix}.cvFolds`}/>
 
                 {metrics && (
                     <React.Fragment>
                         <FormGroup row>
-                            <Label htmlFor={`${validationStrategyPrefix}.metrics`} sm={4}>Validation Metrics</Label>
+                            <Label htmlFor={`${validationStrategiesPrefix}.metrics`} sm={4}>Validation Metrics</Label>
                             <Col sm={8}>
-                                <Field name={`${validationStrategyPrefix}.metrics`} as={Input} type="select" multiple>
+                                <Field name={`${validationStrategiesPrefix}.metrics`} as={Input} type="select" multiple>
                                     {
                                         metrics.map(metric => (
                                             <option key={metric.id} value={metric.id}>
@@ -347,7 +349,7 @@ export function QSARValidationStrategies(props) {
                                 </Field>
                             </Col>
                         </FormGroup>
-                        <FieldErrorMessage name={`${validationStrategyPrefix}.metrics`}/>
+                        <FieldErrorMessage name={`${validationStrategiesPrefix}.metrics`}/>
                     </React.Fragment>
                 )}
             </React.Fragment>
@@ -371,7 +373,7 @@ export function QSARValidationStrategies(props) {
                             </div>
                             <QSARValidationStrategies
                                 {...props}
-                                validationStrategyPrefix={`validationStrategy[${index}]`}
+                                validationStrategiesPrefix={`validationStrategies[${index}]`}
                                 formikProps={props.formikProps}
                             />
                         </div>

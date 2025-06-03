@@ -2,21 +2,47 @@ import React from 'react';
 import * as Yup from 'yup';
 import {SimpleDropDownToggle} from '../../index';
 import {CardBody} from 'reactstrap';
+// import {ArraySchema, ObjectSchema} from "yup";
 
 const ModelFormRenderer = (props) => {
-    const CTYPE_TO_VALIDATOR = {
+    const CTYPE_TO_VALIDATOR = React.useMemo(() => ({
         string: Yup.string().required(),
         integer: Yup.number().required(),
         float: Yup.number().required(),
         bool: Yup.bool().required(),
         object: Yup.object().required(),
         array: Yup.array().of(Yup.mixed().nullable()).required(),
-    };
+    }), []);
+
+
+    // const printYupSchema = (schema, indent = 0, path = '') => {
+    //     if (!schema) return;
+    //     const spacing = '  '.repeat(indent);
+    //     const type = schema.constructor.name.replace('Schema', '').toLowerCase();
+    //
+    //     if (path) {
+    //         console.log(`${spacing}${path}: ${type}`);
+    //     }
+    //
+    //     if (schema instanceof ObjectSchema) {
+    //         const fields = schema.fields;
+    //         for (const key in fields) {
+    //             if (fields.hasOwnProperty(key)) {
+    //                 printYupSchema(fields[key], indent + 1, key);
+    //             }
+    //         }
+    //     } else if (schema instanceof ArraySchema) {
+    //         const innerType = schema.innerType;
+    //         if (innerType) {
+    //             printYupSchema(innerType, indent + 1, '[ ]');
+    //         }
+    //     }
+    // };
 
     const chosenAlgorithm = props.chosenAlgorithm;
     const parameters = !props.omitAlgParams ? props.chosenAlgorithm.parameters : null;
     const enableFileUploads = props.enableFileUploads;
-    const disabledModelFormFields = props.disabledModelFormFields ? props.disabledModelFormFields : [];
+    const disabledModelFormFields = React.useMemo(() => (props.disabledModelFormFields ? props.disabledModelFormFields : []), [props]);
 
     const initMetrics = (metrics_array) => {
         const ret = [];
@@ -34,59 +60,17 @@ const ModelFormRenderer = (props) => {
     const [schema, setSchema] = React.useState(null);
     const [formDataReady, setFormDataReady] = React.useState(false);
 
-    React.useEffect(() => {
-        if (modes.length === 1) {
-            initFormData();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-
-    const initFormData = () => {
-        setInitialValues(generateInit());
-        setSchema(generateSchema());
-        setFormDataReady(true);
-    };
-
-    const handleModeSelect = (mode) => {
-        if (metrics) {
-            const metrics_array = [];
-            metrics.forEach(metric => {
-                if (metric.validModes.find(item => mode.id === item.id)) {
-                    metrics_array.push(metric);
-                }
-            });
-            setMetrics(metrics_array);
-        }
-        setModes([mode]);
-        initFormData();
-    };
-
-    const generateInit = () => {
+    const generateInit = React.useCallback(() => {
         const trainingStrategyDefaultInit = {
             algorithm: chosenAlgorithm.id,
             mode: modes.length > 0 ? modes[0].id : [],
         };
         const trainingStrategyInit = Object.assign(trainingStrategyDefaultInit, props.trainingStrategyInit ? props.trainingStrategyInit : {});
-        let validationStrategiesInit;
 
-        if (props.validationStrategiesInit && Array.isArray(props.validationStrategiesInit)) {
-            validationStrategiesInit = props.validationStrategiesInit.map(strategy => {
-                const defaultInit = metrics && !disabledModelFormFields.includes('validationStrategy.metrics') ? {
-                    metrics: metrics.length > 0 ? [metrics[0].id] : [],
-                    cvFolds: 3,
-                } : {};
-                return Object.assign({}, defaultInit, strategy);
-            });
-        } else {
-            const validationStrategyDefaultInit = metrics && !disabledModelFormFields.includes('validationStrategy.metrics') ? {
-                metrics: metrics.length > 0 ? [metrics[0].id] : []
-            } : {};
-            validationStrategiesInit = Object.assign({}, validationStrategyDefaultInit, props.validationStrategyInit ? props.validationStrategyInit : {});
-            if (Object.keys(validationStrategiesInit).length !== 0) {
-                validationStrategiesInit = [validationStrategiesInit];
-            }
-        }
+        const validationStrategiesDefaultInit = metrics && !disabledModelFormFields.includes('validationStrategy.metrics') ?
+            [{metrics: metrics.length > 0 ? [metrics[0].id] : [], cvFolds: 3}] : [];
+
+        const validationStrategiesInit = props.validationStrategiesInit ? props.validationStrategiesInit : validationStrategiesDefaultInit;
 
         let initialValues = {
             name: `New ${chosenAlgorithm.name} Model`,
@@ -123,9 +107,10 @@ const ModelFormRenderer = (props) => {
         }
 
         return initialValues;
-    };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [chosenAlgorithm, disabledModelFormFields, modes, metrics, parameters, props, enableFileUploads]);
 
-    const generateSchema = () => {
+    const generateSchema = React.useCallback(() => {
         const trainingStrategyDefault = {
             algorithm: Yup.number().integer().positive("Algorithm ID needs to be a positive number").required('Algorithm ID must be supplied'),
             mode: Yup.number().integer()
@@ -162,20 +147,8 @@ const ModelFormRenderer = (props) => {
             validationObj.modelFile = Yup.mixed().required("Model file is required.");
         }
 
-        if (props.validationStrategiesSchema && props.validationStrategiesSchema._subType === 'array') {
+        if (props.validationStrategiesSchema) {
             validationObj.validationStrategies = props.validationStrategiesSchema;
-        } else {
-            const validationStrategyDefault = metrics && !disabledModelFormFields.includes('validationStrategies.metrics') ? {
-                metrics: Yup.array().of(Yup.number().positive('Metric ID must be a positive integer.')).required('You need to supply at least one metric for validation.'),
-            } : {};
-
-            const validationStrategies = Object.assign({}, validationStrategyDefault, props.validationStrategiesSchema || {});
-
-            if (Object.keys(validationStrategies).length !== 0) {
-                validationObj.validationStrategy = Yup.array().of(
-                    Yup.object().shape(validationStrategies)
-                ).min(1, 'At least one validation strategy is required');
-            }
         }
 
         validationObj = Object.assign(validationObj, props.extraParamsSchema);
@@ -189,8 +162,35 @@ const ModelFormRenderer = (props) => {
                 formDataReady: formDataReady,
             });
         }
-        // console.log(validationObj);
+        // printYupSchema(Yup.object().shape(validationObj));
         return Yup.object().shape(validationObj);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [CTYPE_TO_VALIDATOR, disabledModelFormFields, enableFileUploads, metrics, modes, parameters, props]);
+
+    const initFormData = React.useCallback(() => {
+        setInitialValues(generateInit());
+        setSchema(generateSchema());
+        setFormDataReady(true);
+    }, [generateSchema, generateInit]);
+
+    React.useEffect(() => {
+        if (modes.length === 1) {
+            initFormData();
+        }
+    }, [modes.length, initFormData])
+
+    const handleModeSelect = (mode) => {
+        if (metrics) {
+            const metrics_array = [];
+            metrics.forEach(metric => {
+                if (metric.validModes.find(item => mode.id === item.id)) {
+                    metrics_array.push(metric);
+                }
+            });
+            setMetrics(metrics_array);
+        }
+        setModes([mode]);
+        initFormData();
     };
 
     if (!formDataReady) {

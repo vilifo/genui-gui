@@ -28,25 +28,6 @@ export default function MapCreateCard(props) {
             )).required('You have to select at least one compound set to map.'),
     };
 
-    const handleSubmit = (values, actions) => {
-        const errors = {};
-        try {
-            trainingStrategySchema.validateSync(values.trainingStrategy, { abortEarly: false });
-        } catch (err) {
-            console.log('Training Strategy Validation Errors:', err.errors);
-            errors.trainingStrategy = err.errors;
-        }
-
-        try {
-            extraParamsSchema.validateSync(values.extraParams, { abortEarly: false });
-        } catch (err) {
-            console.log('Extra Params Validation Errors:', err.errors);
-            errors.extraParams = err.errors;
-        }
-        console.log('Form Values:', values);
-        console.log('Validation Errors:', errors);
-    }
-
     return (
         <ModelCardNew
             {...props}
@@ -58,6 +39,5 @@ export default function MapCreateCard(props) {
             trainingStrategyFields={MapTrainFields}
             extraFields={MapExtraFields}
             prePost={convertEmbeddingsArgumentsObjectsToArrays}
-            onSubmit={handleSubmit}
         />)
 }

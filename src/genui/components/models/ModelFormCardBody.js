@@ -12,7 +12,6 @@ const ModelFormCardBody = (props) => {
                     {...props}
                     onSubmit={
                         (values) => {
-                            console.log("Submitting form with values:", values);
                             setFormIsSubmitting(true);
                             props.handleCreate(values);
                         }
