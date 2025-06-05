@@ -4,14 +4,14 @@ import {Field} from 'formik';
 import {FieldErrorMessage, useLocalStorageWithExpiry} from "../../genui";
 
 const algorithmsListKey = 'algorithmsCache_list';
-const algorithmsParametersKey = 'algorithmsCache_parameters';
+export const algorithmsParametersKey = 'algorithmsCache_parameters';
 
 export function AlgorithmsField(props) {
     const algorithmPrefix = "trainingStrategy.parameters";
     const currentMode = props.modes[0].name || null;
     const [loading, setLoading] = React.useState(false);
-    const [allAlgorithms, setAllAlgorithms] = useLocalStorageWithExpiry(algorithmsListKey, [], 24);
-    const [internalParameters, setInternalParameters] = useLocalStorageWithExpiry(algorithmsParametersKey, {}, 24);
+    const [allAlgorithms, setAllAlgorithms] = useLocalStorageWithExpiry(algorithmsListKey, []);
+    const [internalParameters, setInternalParameters] = useLocalStorageWithExpiry(algorithmsParametersKey, {});
     const [loadingAlgorithms, setLoadingAlgorithms] = React.useState(false);
     const {values, setFieldValue} = props.formikProps || {};
     const [selectedAlgorithm, setSelectedAlgorithm] = React.useState(values?.trainingStrategy?.parameters?.alg);

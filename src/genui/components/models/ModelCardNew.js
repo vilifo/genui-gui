@@ -55,8 +55,6 @@ const ModelCardNew = (props) => {
 
       const filesUrl = new URL(`${modelID}/files/`, props.listURL);
       datas.forEach((data) => {
-        console.log('Uploading model file to URL:', filesUrl.toString());
-        console.log('File upload data:', data);
         fetch(filesUrl, {
           method: 'POST',
           body: data,

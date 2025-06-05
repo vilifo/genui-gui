@@ -1,10 +1,11 @@
 import React from 'react';
 import {Button, Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
-import {FieldErrorMessage, EmbeddingsField, AlgorithmsField, useLocalStorageWithExpiry} from '../../../genui';
+import {FieldErrorMessage, EmbeddingsField, AlgorithmsField, useLocalStorageWithExpiry, QSARHyperparameterOptimizationStrategyFields} from '../../../genui';
 
 const dataSplitsCacheKey = 'qsarDataSplitsCache';
 const dataSplitsParametersCacheKey = 'qsarDataSplitParametersCache';
+const scaffoldsCacheKey = 'qsarScaffoldsCache';
 
 export function PredictionsFields(props) {
     return (
@@ -101,6 +102,14 @@ export function QSARTrainingFields(props) {
                     formikProps={formikProps}
                 />
             </FormGroup>
+            <FormGroup>
+                <QSARHyperparameterOptimizationStrategyFields
+                    {...props}
+                    hyperparamStrategyPrefix={`hyperParamOptStrategy`}
+                    formikProps={formikProps}
+                    metrics={props.metrics}
+                />
+            </FormGroup>
         </React.Fragment>
     )
 }
@@ -113,6 +122,8 @@ export function QSARValidationStrategies(props) {
     const [loadingDataSplits, setLoadingDataSplits] = React.useState(false);
     const [allDataSplits, setAllDataSplits] = useLocalStorageWithExpiry(dataSplitsCacheKey, []);
     const [dataSplitsParameters, setDataSplitsParameters] = useLocalStorageWithExpiry(dataSplitsParametersCacheKey, {});
+    const [loadingScaffolds, setLoadingScaffolds] = React.useState(false);
+    const [scaffolds, setScaffolds] = useLocalStorageWithExpiry(scaffoldsCacheKey, []);
     const {values, setFieldValue} = props.formikProps || {};
     const metrics = props.metrics;
 
@@ -135,6 +146,34 @@ export function QSARValidationStrategies(props) {
             setFieldValue('validationStrategies', currentValidationStrategies);
         }
     };
+
+    const fetchScaffolds = React.useCallback(async () => {
+        if (!props.apiUrls || !props.apiUrls.qsarRoot) {
+            console.error("API URLs not provided");
+            return;
+        }
+
+        if (scaffolds.length > 0) {
+            return;
+        }
+        setLoadingScaffolds(true);
+        try {
+            const url = new URL(`data-splits/scaffolds/list/`, props.apiUrls.qsarRoot);
+            const response = await fetch(url.toString(), {
+                credentials: "include",
+            });
+            if (!response.ok) {
+                throw new Error(`Failed to fetch data splits: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            setScaffolds(data);
+        } catch (error) {
+            console.error("Error fetching scaffolds:", error);
+        } finally {
+            setLoadingScaffolds(false);
+        }
+    }, [props.apiUrls, scaffolds, setScaffolds]);
 
     const fetchDataSplits = React.useCallback(async () => {
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
@@ -237,6 +276,7 @@ export function QSARValidationStrategies(props) {
         const currentDataSplitName = values?.validationStrategies?.[currentIndex]?.dataSplit.name;
         const currentDataSplit = dataSplitsParameters?.[currentDataSplitName];
         const type = currentDataSplit?.[paramName] ? currentDataSplit[paramName].type : null;
+        // console.log(paramName, paramValue, type);
         if (paramName === "name" || paramValue === null || paramValue === undefined) {
             return null;
         } else if (paramName === "scaffold") {
@@ -244,7 +284,19 @@ export function QSARValidationStrategies(props) {
                 <FormGroup row>
                     <Label htmlFor={`${validationStrategiesPrefix}.scaffold`} sm={4}>Scaffold</Label>
                     <Col sm={8}>
-                        <Field name={`${validationStrategiesPrefix}.scaffold`} as={Input} type="text" value={paramValue}/>
+                        <Field
+                            name={`${validationStrategiesPrefix}.scaffold`}
+                            as={Input} type="select"
+                            disabled={loadingScaffolds}
+                        >
+                            {loadingScaffolds ? (
+                                <option value="" disabled>Loading scaffolds...</option>
+                            ) : (
+                                scaffolds.map((s) => (
+                                    <option key={s} value={s}>{s}</option>
+                                ))
+                            )}
+                        </Field>
                         <FieldErrorMessage name={`${validationStrategiesPrefix}.scaffold`}/>
                     </Col>
                 </FormGroup>
@@ -273,6 +325,10 @@ export function QSARValidationStrategies(props) {
     React.useEffect(() => {
         fetchDataSplits();
     }, [fetchDataSplits]);
+
+    React.useEffect(() => {
+        fetchScaffolds()
+    }, [fetchScaffolds])
 
     React.useEffect(() => {
         if (currentDataSplitId) {

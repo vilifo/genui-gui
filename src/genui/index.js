@@ -67,6 +67,7 @@ import {MoleculeProvider, MoleculeListProvider} from "./components/compounds/Mol
 import {EmbeddingsField, convertEmbeddingsArgumentsObjectsToArrays} from "./components/EmbeddingField";
 import {AlgorithmsField} from "./components/AlgorithmsField";
 import {useLocalStorageWithExpiry} from './components/LocalStorageWithExpiry';
+import {QSARHyperparameterOptimizationStrategyFields} from "./components/HyperparameterOptimizationStrategyFields";
 
 // TODO: structure this list in a more sensible way
 export {
@@ -140,5 +141,6 @@ export {
     EmbeddingsField,
     AlgorithmsField,
     convertEmbeddingsArgumentsObjectsToArrays,
-    useLocalStorageWithExpiry
+    useLocalStorageWithExpiry,
+    QSARHyperparameterOptimizationStrategyFields
 }
