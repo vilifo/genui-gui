@@ -1,5 +1,10 @@
 import * as Yup from 'yup';
-import {MolsetActivitiesSummary, ModelCardNew, SimpleDropDownToggle, convertEmbeddingsArgumentsObjectsToArrays} from '../../../genui';
+import {
+    MolsetActivitiesSummary,
+    ModelCardNew,
+    SimpleDropDownToggle,
+    convertEmbeddingsArgumentsObjectsToArrays
+} from '../../../genui';
 import React from 'react';
 import {QSARExtraFields, QSARTrainingFields, QSARValidationStrategies} from './QSARModelFormFields';
 import {Button, CardBody, CardHeader, Col, Row, CardFooter} from 'reactstrap';
@@ -7,6 +12,14 @@ import {Button, CardBody, CardHeader, Col, Row, CardFooter} from 'reactstrap';
 function EndpointSelector(props) {
     return <MolsetActivitiesSummary {...props} selectable={true}
                                     message="Choose the desired activity endpoint by clicking the corresponding row in the table below. The chosen activity type from the given activity set will be used as the output variable for the resulting model."/>
+}
+
+function floatRange(start, end, step = 1.0) {
+    const output = [];
+    for (let i = start; i < end; i += step) {
+        output.push(Number(i.toFixed(12)));
+    }
+    return output;
 }
 
 export default function QSARModelCreateCard(props) {
@@ -43,7 +56,10 @@ export default function QSARModelCreateCard(props) {
 
     const trainingStrategySchema = {
         activityThreshold: Yup.number().min(0, 'Activity threshold must be zero or positive.').required('Activity threshold is a required parameter.'),
-        embeddings: Yup.array().of(Yup.object().shape({name:Yup.string(), arguments:Yup.object()})).required('You need to supply one or more descriptor sets for training.'),
+        embeddings: Yup.array().of(Yup.object().shape({
+            name: Yup.string(),
+            arguments: Yup.object()
+        })).required('You need to supply one or more descriptor sets for training.'),
         parameters: Yup.object().shape({
             alg: Yup.string().required('You need to select an algorithm.'),
             parameters: Yup.object()
@@ -71,7 +87,7 @@ export default function QSARModelCreateCard(props) {
         trainingStrategySchema.activitySet = Yup.number().integer().positive('Activity set ID must be a positive integer.').required('You need to supply a set of activities to use for modelling.');
     }
 
-   return !dataReady ? (
+    return !dataReady ? (
         <React.Fragment>
             <CardHeader>QSAR Training Set and Activity Endpoint</CardHeader>
             <CardBody className="scrollable">
@@ -145,17 +161,39 @@ export default function QSARModelCreateCard(props) {
                 }
                 data = convertEmbeddingsArgumentsObjectsToArrays(data);
                 data.trainingStrategy.parameters = {
-                    alg:data.trainingStrategy.parameters.alg,
-                    parameters:JSON.stringify(data.trainingStrategy.parameters.parameters)
+                    alg: data.trainingStrategy.parameters.alg,
+                    parameters: JSON.stringify(data.trainingStrategy.parameters.parameters)
                 };
                 if (data.validationStrategies && data.validationStrategies.length > 0) {
                     const updatedValidationStrategies = [];
                     data.validationStrategies.forEach((vs) => {
-                        vs["resourcetype"] =  "BasicValidationStrategy";
+                        vs["resourcetype"] = "BasicValidationStrategy";
                         updatedValidationStrategies.push(vs);
                     });
                     delete data.validationStrategies;
                     data.trainingStrategy["validationStrategies"] = updatedValidationStrategies;
+                }
+                if (data.hyperParamOptStrategy) {
+                    if (data.hyperParamOptStrategy.resourcetype !== "None") {
+                        if (data.hyperParamOptStrategy.resourcetype === "GridSearchOptimization") {
+                            data.hyperParamOptStrategy.searchSpace = Object.fromEntries(
+                                Object.entries(data.hyperParamOptStrategy.searchSpace).map(([key, value]) => {
+                                    if (Array.isArray(value)) {
+                                        return [key, value.slice(2)];
+                                    } else if (typeof value === "object") {
+                                        return [key, floatRange(value.min, value.max, value.step)];
+                                    } else if (typeof value === "string") {
+                                        return [key, value.split(';').map(v => Number.parseFloat(v.trim())).filter(v => !isNaN(v))];
+                                    }
+                                    return [key, value];
+                                }));
+                        }
+                        data.trainingStrategy["hyperParamOptStrategies"] = [data.hyperParamOptStrategy]
+                    }
+                    delete data.hyperParamOptStrategy;
+                    if (data.searchSpace) {
+                        delete data.searchSpace;
+                    }
                 }
                 return data;
             }}

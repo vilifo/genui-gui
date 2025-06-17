@@ -84,6 +84,7 @@ export function AlgorithmsField(props) {
             alg: selectedAlgorithmId,
             parameters: {}
         });
+        setFieldValue(`hyperParamOptStrategy`, {"resourcetype": "None"});
         fetchedRef.current[selectedAlgorithmId] = false;
     };
 
@@ -93,9 +94,9 @@ export function AlgorithmsField(props) {
         const type = constraint ? constraint.type : null;
 
         const validateInterval = (x) => {
-            if (!Number.parseFloat(x)) {
+            if (isNaN(x) && type === "float") {
                 return "This field must be a number.";
-            } else if (!Number.parseInt(x) && type === "int") {
+            } else if (isNaN(x) && type === "int") {
                 return "This field must be an integer.";
             } else {
                 if (constraint.min) {
@@ -129,7 +130,7 @@ export function AlgorithmsField(props) {
                             {...constraint.min ? {min: constraint.min} : {}}
                             {...constraint.max ? {max: constraint.max} : {}}
                         />
-                        <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`} />
+                        <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
                     </Col>
                 </div>
             );
@@ -137,7 +138,7 @@ export function AlgorithmsField(props) {
             return (
                 <div key={paramName} className="form-check" style={{margin: '5px'}}>
                     <Field>
-                        {({ field }) => (
+                        {({field}) => (
                             <input
                                 {...field}
                                 type="checkbox"
@@ -150,7 +151,7 @@ export function AlgorithmsField(props) {
                     <label className="form-check-label" htmlFor={`${algorithmPrefix}-parameters-${paramName}`}>
                         {paramName}
                     </label>
-                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`} />
+                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
                 </div>
             );
         } else if (type === "str") {
@@ -171,7 +172,7 @@ export function AlgorithmsField(props) {
                             </option>
                         ))}
                     </Field>
-                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`} />
+                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
                 </div>
             );
         } else if (Number.parseInt(paramValue) || Number.parseFloat(paramValue)) {
@@ -184,7 +185,7 @@ export function AlgorithmsField(props) {
                             as={Input}
                             type="number"
                         />
-                        <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`} />
+                        <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
                     </Col>
                 </div>
             );
@@ -200,7 +201,7 @@ export function AlgorithmsField(props) {
                         onChange={(e) => setFieldValue(`${algorithmPrefix}.parameters.${paramName}`, e.target.value)}
                     >
                     </Field>
-                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`} />
+                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
                 </div>
             );
         }
@@ -237,7 +238,7 @@ export function AlgorithmsField(props) {
                         ))
                     )}
                 </Field>
-                <FieldErrorMessage name={`${algorithmPrefix}.parameters.alg`} />
+                <FieldErrorMessage name={`${algorithmPrefix}.parameters.alg`}/>
             </FormGroup>
 
             {loading ? (

@@ -343,9 +343,10 @@ export function QSARValidationStrategies(props) {
                     <Label htmlFor={`${validationStrategiesPrefix}.dataSplit`} sm={4}>Data Split</Label>
                     <Col sm={8}>
                         <Field
-                            name={`${validationStrategiesPrefix}.dataSplit`}
+                            name={`${validationStrategiesPrefix}.dataSplit.name`}
                             as={Input}
                             type="select"
+                            value={values?.validationStrategies?.[currentIndex]?.dataSplit?.name || ""}
                             onChange={handleDataSplitChange}
                             disabled={loadingDataSplits}
                         >
@@ -359,7 +360,7 @@ export function QSARValidationStrategies(props) {
                         </Field>
                     </Col>
                 </FormGroup>
-                <FieldErrorMessage name={`${validationStrategiesPrefix}.dataSplit`}/>
+                <FieldErrorMessage name={`${validationStrategiesPrefix}.dataSplit.name`}/>
                 {loading ? (
                     <p>Loading parameters...</p>
                 ) : values && values.validationStrategies && currentIndex !== null ? (

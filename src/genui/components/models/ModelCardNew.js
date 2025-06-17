@@ -8,7 +8,6 @@ const ModelCardNew = (props) => {
   const [algorithm, setAlgorithm] = useState(props.chosenAlgorithm);
 
   const newModelFromFormData = (data) => {
-    console.log(data);
     if (props.prePost) {
       data = props.prePost(data);
     }
@@ -73,7 +72,6 @@ const ModelCardNew = (props) => {
   };
 
   const postModelData = (data, afterModelPOST) => {
-    console.log(data);
     fetch(
       props.listURL
       , {
