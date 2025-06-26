@@ -2,7 +2,8 @@ import React, {useEffect, useState} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {ComponentWithResources} from '../../index';
 
-const ProjectManager = React.forwardRef((props, ref) => {
+
+export default function ProjectManager(props) {
     const [project, setProject] = useState(null)
     const openCallback = props.onProjectOpen;
     const navigate = useNavigate();
@@ -67,6 +68,4 @@ const ProjectManager = React.forwardRef((props, ref) => {
             {props.render({currentProject: null, openProject: openProject, deleteProject: deleteProject})}
         </React.Fragment>
     )
-});
-
-export default ProjectManager;
+}

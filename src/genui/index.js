@@ -14,6 +14,7 @@ import ComponentWithResources from './components/ComponentWithResources';
 import ModelGrid from './components/models/ModelGrid';
 import ModelsPage from './components/models/ModelsPage';
 import ModelCardNew from './components/models/ModelCardNew';
+import ModelCardNewDefault from './components/models/ModelCardNewDefault';
 import ModelCard from './components/models/ModelCard';
 import ModelInfoTab from './components/models/tabs/ModelInfo';
 import ModelPerformance from './components/models/tabs/ModelPerformance';
@@ -142,5 +143,6 @@ export {
     AlgorithmsField,
     convertEmbeddingsArgumentsObjectsToArrays,
     useLocalStorageWithExpiry,
-    QSARHyperparameterOptimizationStrategyFields
+    QSARHyperparameterOptimizationStrategyFields,
+    ModelCardNewDefault
 }

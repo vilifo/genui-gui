@@ -4,9 +4,83 @@ import {Field} from 'formik';
 import FieldErrorMessage from './forms/FieldErrorMessage';
 import useLocalStorageWithExpiry from "./LocalStorageWithExpiry";
 
-const embeddingsListKey = 'embeddingsCache_list';
-const embeddingsArgumentsKey = 'embeddingsCache_arguments';
+export const embeddingsListKey = 'embeddingsCache_list';
+export const embeddingsArgumentsKey = 'embeddingsCache_arguments';
 const fetchingArguments = {};
+
+export async function fetchEmbeddingsExternal({apiUrls, allEmbeddings, setAllEmbeddings}) {
+    if (!apiUrls || !apiUrls.qsarRoot) {
+        console.error("API URLs not provided");
+        return;
+    }
+
+    if (allEmbeddings.length > 0) {
+        return;
+    }
+
+    try {
+        const url = new URL('embeddings/list/', apiUrls.qsarRoot);
+        const response = await fetch(url.toString(), {
+            credentials: "include",
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch embeddings: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setAllEmbeddings(data);
+    } catch (error) {
+        console.error("Error fetching embeddings:", error);
+    }
+}
+
+export async function fetchEmbeddingArgumentsExternal(emb_name, {
+    apiUrls,
+    embeddingsArguments,
+    setEmbeddingsArguments
+}) {
+    if (!emb_name) return;
+    if (!apiUrls || !apiUrls.qsarRoot) {
+        console.error("API URLs not provided");
+        return;
+    }
+
+    const processArguments = (data) => {
+        const processedData = {};
+        Object.entries(data).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+                const array_data = {};
+                Object.entries(value).forEach(([subkey, subvalue]) => {
+                    array_data[subvalue] = false;
+                });
+                processedData[key] = array_data;
+            } else {
+                processedData[key] = value;
+            }
+        });
+        return processedData;
+    };
+
+    try {
+        const url = new URL(`embeddings/${emb_name}/arguments`, apiUrls.qsarRoot);
+        const response = await fetch(url.toString(), {
+            credentials: "include",
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch embedding arguments: ${response.statusText}`);
+        }
+
+        let data = await response.json();
+        data = processArguments(data);
+        const updateEmbeddingsArguments = {...embeddingsArguments};
+        updateEmbeddingsArguments[emb_name] = data;
+        setEmbeddingsArguments(updateEmbeddingsArguments);
+    } catch (error) {
+        console.error("Error fetching embedding arguments:", error);
+    }
+}
 
 export function EmbeddingsField(props) {
     const embeddingPrefix = props.embeddingPrefix;
@@ -41,42 +115,16 @@ export function EmbeddingsField(props) {
     };
 
     const fetchEmbeddings = React.useCallback(async () => {
-        if (!props.apiUrls || !props.apiUrls.qsarRoot) {
-            console.error("API URLs not provided");
-            return;
-        }
-
-        if (allEmbeddings.length > 0) {
-            return;
-        }
-
         setLoadingEmbeddings(true);
-        try {
-            const url = new URL('embeddings/list/', props.apiUrls.qsarRoot);
-            const response = await fetch(url.toString(), {
-                credentials: "include",
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch embeddings: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            setAllEmbeddings(data);
-        } catch (error) {
-            console.error("Error fetching embeddings:", error);
-        } finally {
-            setLoadingEmbeddings(false);
-        }
-    }, [props.apiUrls, allEmbeddings.length, setAllEmbeddings]);
+        await fetchEmbeddingsExternal({
+            apiUrls: props.apiUrls,
+            allEmbeddings,
+            setAllEmbeddings
+        })
+        setLoadingEmbeddings(false);
+    }, [props.apiUrls, allEmbeddings, setAllEmbeddings]);
 
     const fetchEmbeddingArguments = React.useCallback(async (emb_name) => {
-        if (!emb_name) return;
-        if (!props.apiUrls || !props.apiUrls.qsarRoot) {
-            console.error("API URLs not provided");
-            return;
-        }
-
         const setArguments = (data) => {
             fetchedRef.current[emb_name] = true;
             if (values && setFieldValue) {
@@ -92,22 +140,6 @@ export function EmbeddingsField(props) {
                     setFieldValue('trainingStrategy.embeddings', updatedEmbeddings);
                 }
             }
-        };
-
-        const processArguments = (data) => {
-            const processedData = {};
-            Object.entries(data).forEach(([key, value]) => {
-                if (Array.isArray(value)) {
-                    const array_data = {};
-                    Object.entries(value).forEach(([subkey, subvalue]) => {
-                        array_data[subvalue] = false;
-                    });
-                    processedData[key] = array_data;
-                } else {
-                    processedData[key] = value;
-                }
-            });
-            return processedData;
         };
 
         if (embeddingsArguments[emb_name]) {
@@ -136,28 +168,13 @@ export function EmbeddingsField(props) {
 
         fetchingArguments[emb_name] = true;
         setLoading(true);
-        try {
-            const url = new URL(`embeddings/${emb_name}/arguments`, props.apiUrls.qsarRoot);
-            const response = await fetch(url.toString(), {
-                credentials: "include",
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch embedding arguments: ${response.statusText}`);
-            }
-
-            let data = await response.json();
-            data = processArguments(data);
-            const updateEmbeddingsArguments = {...embeddingsArguments};
-            updateEmbeddingsArguments[emb_name] = data;
-            setEmbeddingsArguments(updateEmbeddingsArguments);
-            setArguments(data);
-        } catch (error) {
-            console.error("Error fetching embedding arguments:", error);
-        } finally {
-            fetchingArguments[emb_name] = false;
-            setLoading(false);
-        }
+        await fetchEmbeddingArgumentsExternal(emb_name, {
+            apiUrls: props.apiUrls,
+            embeddingsArguments: embeddingsArguments,
+            setEmbeddingsArguments: setEmbeddingsArguments
+        });
+        fetchingArguments[emb_name] = false;
+        setLoading(false);
     }, [props.apiUrls, values, setFieldValue, currentIndex, embeddingsArguments, setEmbeddingsArguments]);
 
     const handleEmbeddingChange = (event) => {
@@ -218,7 +235,7 @@ export function EmbeddingsField(props) {
                     {Object.entries(paramValue).map(([key, value]) => (
                         <div key={key} className="form-check" style={{margin: '5px'}}>
                             <Field>
-                                {({ field }) => (
+                                {({field}) => (
                                     <input
                                         {...field}
                                         type="checkbox"

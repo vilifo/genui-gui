@@ -6,8 +6,7 @@ export class DrugExNetCard extends React.Component {
 
   render() {
     const model =  this.props.model;
-    // const trainingStrategy = model.trainingStrategy;
-    const validationStrategy = model.validationStrategies;
+    const validationStrategies = model.validationStrategies;
 
     const trainingParams = [
       {
@@ -20,10 +19,10 @@ export class DrugExNetCard extends React.Component {
       },
     ];
 
-    const validationParams = validationStrategy ? [
+    const validationParams = validationStrategies ? [
       {
         name : "Validation Set Size",
-        value : validationStrategy.validSetSize
+        value : validationStrategies.validSetSize
       }
     ] : [];
 

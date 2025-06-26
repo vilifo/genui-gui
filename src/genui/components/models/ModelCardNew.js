@@ -62,7 +62,6 @@ const ModelCardNew = (props) => {
           .then(resp => props.handleResponseErrors(resp, "Uploading file failed."))
           // .then(data => {
             // TODO: use this to inform the user about upload progress before elevating the state change to parent with "props.handleAddModel"
-            // No need for setState in functional component
           // })
           .catch(err => console.log(err)); // TODO: record an error for this file in state
       });

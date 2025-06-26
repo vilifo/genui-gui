@@ -7,6 +7,7 @@ import {
 import QSARModelCard from './ModelCard';
 import QSARModelCreateCard from './QSARModelCreateCard';
 import QSARModelCreateFromFileCard from './QSARModelCreateFromFileCard';
+import QSARModelCreateDefaultCard from './QSARModelCreateDefaultCard';
 
 function Models(props) {
   const resources = {
@@ -27,6 +28,10 @@ function Models(props) {
         {
           label: "Import",
           component: QSARModelCreateFromFileCard
+        },
+        {
+          label: "Build default",
+          component: QSARModelCreateDefaultCard
         }
       ],
       listComponent: QSARModelCard,

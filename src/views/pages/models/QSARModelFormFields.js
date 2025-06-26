@@ -1,7 +1,13 @@
 import React from 'react';
 import {Button, Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
-import {FieldErrorMessage, EmbeddingsField, AlgorithmsField, useLocalStorageWithExpiry, QSARHyperparameterOptimizationStrategyFields} from '../../../genui';
+import {
+    FieldErrorMessage,
+    EmbeddingsField,
+    AlgorithmsField,
+    useLocalStorageWithExpiry,
+    QSARHyperparameterOptimizationStrategyFields
+} from '../../../genui';
 
 const dataSplitsCacheKey = 'qsarDataSplitsCache';
 const dataSplitsParametersCacheKey = 'qsarDataSplitParametersCache';
@@ -276,7 +282,6 @@ export function QSARValidationStrategies(props) {
         const currentDataSplitName = values?.validationStrategies?.[currentIndex]?.dataSplit.name;
         const currentDataSplit = dataSplitsParameters?.[currentDataSplitName];
         const type = currentDataSplit?.[paramName] ? currentDataSplit[paramName].type : null;
-        // console.log(paramName, paramValue, type);
         if (paramName === "name" || paramValue === null || paramValue === undefined) {
             return null;
         } else if (paramName === "scaffold") {
@@ -285,7 +290,7 @@ export function QSARValidationStrategies(props) {
                     <Label htmlFor={`${validationStrategiesPrefix}.scaffold`} sm={4}>Scaffold</Label>
                     <Col sm={8}>
                         <Field
-                            name={`${validationStrategiesPrefix}.scaffold`}
+                            name={`${validationStrategiesPrefix}.dataSplit.scaffold`}
                             as={Input} type="select"
                             disabled={loadingScaffolds}
                         >
@@ -297,7 +302,7 @@ export function QSARValidationStrategies(props) {
                                 ))
                             )}
                         </Field>
-                        <FieldErrorMessage name={`${validationStrategiesPrefix}.scaffold`}/>
+                        <FieldErrorMessage name={`${validationStrategiesPrefix}.dataSplit.scaffold`}/>
                     </Col>
                 </FormGroup>
             );
@@ -360,7 +365,7 @@ export function QSARValidationStrategies(props) {
                         </Field>
                     </Col>
                 </FormGroup>
-                <FieldErrorMessage name={`${validationStrategiesPrefix}.dataSplit.name`}/>
+                <FieldErrorMessage name={`${validationStrategiesPrefix}.dataSplit.name  `}/>
                 {loading ? (
                     <p>Loading parameters...</p>
                 ) : values && values.validationStrategies && currentIndex !== null ? (
@@ -437,9 +442,10 @@ export function QSARValidationStrategies(props) {
                     </div>
                 ))}
             </div>
-            <Button color="primary" onClick={addValidationStrategy} className="mt-2">
-                Add Validation Strategy
-            </Button>
+            {(values.hyperParamOptStrategy === undefined || values.hyperParamOptStrategy.resourcetype === "None") &&
+                <Button color="primary" onClick={addValidationStrategy} className="mt-2">
+                    Add Validation Strategy
+                </Button>}
         </React.Fragment>
     );
 }

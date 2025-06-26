@@ -3,89 +3,121 @@ import {Col, FormGroup, Input, Label} from 'reactstrap';
 import {Field} from 'formik';
 import {FieldErrorMessage, useLocalStorageWithExpiry} from "../../genui";
 
-const algorithmsListKey = 'algorithmsCache_list';
+export const algorithmsListKey = 'algorithmsCache_list';
 export const algorithmsParametersKey = 'algorithmsCache_parameters';
+
+export async function fetchAlgorithmsExternal({
+                                                  apiUrls,
+                                                  currentMode,
+                                                  allAlgorithms,
+                                                  setAllAlgorithms,
+                                              }) {
+    if (!apiUrls?.qsarRoot || allAlgorithms[currentMode].length > 0) {
+        return;
+    }
+
+    try {
+        const url = new URL(`models/qsprpred/sklearn/mode/${currentMode}/`, apiUrls.qsarRoot);
+        const response = await fetch(url.toString(), {
+            credentials: "include",
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch algorithms: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setAllAlgorithms({...allAlgorithms, [currentMode]: data});
+    } catch (error) {
+        console.error("Error fetching algorithms:", error);
+    }
+}
+
+export async function fetchAlgorithmParametersExternal(alg_name, {
+    apiUrls,
+    internalParameters,
+    setInternalParameters,
+}) {
+    if (!alg_name || !apiUrls?.qsarRoot) {
+        return;
+    }
+    if (!internalParameters?.[alg_name]) {
+        try {
+            const url = new URL(`models/qsprpred/sklearn/${alg_name}/params`, apiUrls.qsarRoot);
+            const response = await fetch(url.toString(), {
+                credentials: "include",
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch algorithm parameters: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const updatedParams = internalParameters;
+            updatedParams[alg_name] = data;
+            setInternalParameters(updatedParams);
+        } catch (error) {
+            console.error("Error fetching algorithm parameters:", error);
+        }
+    }
+}
+
 
 export function AlgorithmsField(props) {
     const algorithmPrefix = "trainingStrategy.parameters";
     const currentMode = props.modes[0].name || null;
     const [loading, setLoading] = React.useState(false);
-    const [allAlgorithms, setAllAlgorithms] = useLocalStorageWithExpiry(algorithmsListKey, []);
+    const [allAlgorithms, setAllAlgorithms] = useLocalStorageWithExpiry(algorithmsListKey,
+        Object.fromEntries(props.chosenAlgorithm.validModes.map(mode => [mode.name, []])));
     const [internalParameters, setInternalParameters] = useLocalStorageWithExpiry(algorithmsParametersKey, {});
     const [loadingAlgorithms, setLoadingAlgorithms] = React.useState(false);
     const {values, setFieldValue} = props.formikProps || {};
     const [selectedAlgorithm, setSelectedAlgorithm] = React.useState(values?.trainingStrategy?.parameters?.alg);
     const fetchedRef = React.useRef({});
 
-    const fetchAlgorithms = React.useCallback(async () => {
-        if (!props.apiUrls?.qsarRoot || allAlgorithms.length > 0) {
-            return;
-        }
-
-        setLoadingAlgorithms(true);
-        try {
-            const url = new URL(`models/qsprpred/sklearn/mode/${currentMode}/`, props.apiUrls.qsarRoot);
-            const response = await fetch(url.toString(), {
-                credentials: "include",
-            });
-            if (!response.ok) {
-                throw new Error(`Failed to fetch algorithms: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            setAllAlgorithms(data);
-        } catch (error) {
-            console.error("Error fetching algorithms:", error);
-        } finally {
+    const fetchAlgorithms = React.useCallback(
+        async () => {
+            setLoadingAlgorithms(true);
+            await fetchAlgorithmsExternal({
+                apiUrls: props.apiUrls,
+                currentMode: currentMode,
+                allAlgorithms: allAlgorithms,
+                setAllAlgorithms: setAllAlgorithms,
+            })
             setLoadingAlgorithms(false);
-        }
-    }, [props.apiUrls, allAlgorithms.length, setAllAlgorithms, currentMode]);
+        },
+        [props.apiUrls, allAlgorithms, setAllAlgorithms, currentMode]
+    );
 
-    const fetchAlgorithmParameters = React.useCallback(async (alg_name) => {
-        if (!alg_name || !props.apiUrls?.qsarRoot) {
-            return;
-        }
-
-        setLoading(true);
-        if (!internalParameters?.[alg_name]) {
-            try {
-                const url = new URL(`models/qsprpred/sklearn/${alg_name}/params`, props.apiUrls.qsarRoot);
-                const response = await fetch(url.toString(), {
-                    credentials: "include",
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch algorithm parameters: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                const updatedParams = internalParameters;
-                updatedParams[alg_name] = data;
-                setInternalParameters(updatedParams);
-            } catch (error) {
-                console.error("Error fetching algorithm parameters:", error);
+    const fetchAlgorithmParameters = React.useCallback(
+        async (alg_name) => {
+            setLoading(true);
+            await fetchAlgorithmParametersExternal(alg_name,
+                {
+                    apiUrls: props.apiUrls,
+                    internalParameters: internalParameters,
+                    setInternalParameters: setInternalParameters,
+                })
+            if (internalParameters?.[alg_name] && setFieldValue) {
+                const params = Object.fromEntries(
+                    Object.entries(internalParameters[alg_name]).map(
+                        ([key, value]) => [key, value.value]));
+                const newParameters = {alg: alg_name, parameters: params};
+                setFieldValue(algorithmPrefix, newParameters);
             }
+            fetchedRef.current[alg_name] = true;
+            setLoading(false);
         }
-        if (internalParameters?.[alg_name] && setFieldValue) {
-            const params = Object.fromEntries(
-                Object.entries(internalParameters[alg_name]).map(
-                    ([key, value]) => [key, value.value]));
-            const newParameters = {alg: alg_name, parameters: params};
-            setFieldValue(algorithmPrefix, newParameters);
-        }
-        fetchedRef.current[alg_name] = true;
-        setLoading(false);
-    }, [props.apiUrls, setInternalParameters, internalParameters, setFieldValue]);
+        , [props.apiUrls, setInternalParameters, internalParameters, setFieldValue]);
 
     const handleAlgorithmChange = (event) => {
         const selectedAlgorithmId = event.target.value;
+        if (selectedAlgorithmId === selectedAlgorithm) return;
         setSelectedAlgorithm(selectedAlgorithmId);
         setFieldValue(`${algorithmPrefix}.parameters`, {
             alg: selectedAlgorithmId,
             parameters: {}
         });
         setFieldValue(`hyperParamOptStrategy`, {"resourcetype": "None"});
-        fetchedRef.current[selectedAlgorithmId] = false;
     };
 
     const renderParamInput = (paramName, paramValue) => {
@@ -233,7 +265,7 @@ export function AlgorithmsField(props) {
                     {loadingAlgorithms ? (
                         <option value="" disabled>Loading algorithms...</option>
                     ) : (
-                        allAlgorithms.map((alg) => (
+                        allAlgorithms?.[currentMode].map((alg) => (
                             <option key={alg} value={alg}>{alg}</option>
                         ))
                     )}

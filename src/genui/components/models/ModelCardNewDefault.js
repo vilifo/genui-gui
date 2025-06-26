@@ -1,0 +1,246 @@
+import React, {useState} from 'react';
+import {
+    CardBody,
+    Input,
+    Label,
+    CardFooter,
+    Button,
+} from 'reactstrap';
+import {Field, Formik, Form} from "formik";
+import useLocalStorageWithExpiry from "../LocalStorageWithExpiry";
+import {
+    embeddingsListKey,
+    embeddingsArgumentsKey,
+    fetchEmbeddingsExternal,
+    fetchEmbeddingArgumentsExternal
+} from "../EmbeddingField"
+import {algorithmsListKey, fetchAlgorithmsExternal} from "../AlgorithmsField"
+
+const ModelCardNewDefault = (props) => {
+    const [allEmbeddings, setAllEmbeddings] = useLocalStorageWithExpiry(embeddingsListKey, [])
+    const [allAlgorithms, setAllAlgorithms] = useLocalStorageWithExpiry(algorithmsListKey,
+        Object.fromEntries(props.chosenAlgorithm.validModes.map(mode => [mode.name, []])));
+    const [formIsSubmitting, setFormIsSubmitting] = React.useState(false);
+    const validationStrategies = {"Random": "RandomSplit", "Scaffold": "ScaffoldSplit"};
+
+    const fetchEmbeddings = React.useCallback(() => {
+        fetchEmbeddingsExternal({
+            apiUrls: props.apiUrls,
+            allEmbeddings: allEmbeddings,
+            setAllEmbeddings: setAllEmbeddings
+        })
+    }, [props.apiUrls, allEmbeddings, setAllEmbeddings]);
+
+    const fetchAlgorithms = React.useCallback(() => {
+        for (const mode of Object.keys(allAlgorithms)) {
+            fetchAlgorithmsExternal({
+                apiUrls: props.apiUrls,
+                currentMode: mode,
+                allAlgorithms: allAlgorithms,
+                setAllAlgorithms: setAllAlgorithms
+            })
+        }
+    }, [props.apiUrls, allAlgorithms, setAllAlgorithms]);
+
+    React.useEffect(() => {
+        if (allEmbeddings.length === 0) {
+            fetchEmbeddings();
+        }
+        if (Object.keys(allAlgorithms).length === 0) {
+            fetchAlgorithms();
+        }
+    })
+
+
+    const newModelFromFormData = async (data) => {
+        const embeddingsArguments = {};
+        for (const emb of data.embeddings) {
+            await fetchEmbeddingArgumentsExternal(emb, {
+                apiUrls: props.apiUrls,
+                embeddingsArguments: embeddingsArguments,
+                setEmbeddingsArguments: data => embeddingsArguments[emb] = data[emb],
+            })
+        }
+        const accuracy = props.metrics.find(m => m.name === "Accuracy");
+        const rmse = props.metrics.find(m => m.name === "RMSE");
+        const mode = props.chosenAlgorithm.validModes.find(m => m.name === data.task);
+
+        for (const alg of data.algorithms) {
+            postModelData({
+                    name: `Default_${data.embeddings.join("_")}_${alg}_model`,
+                    description: "Model created from default settings with selected embeddings and algorithm.",
+                    project: props.currentProject.id,
+                    molset: props.molsets[0].id,
+                    trainingStrategy: {
+                        algorithm: props.chosenAlgorithm.id,
+                        parameters: {
+                            alg: alg,
+                            parameters: "{}"
+                        },
+                        mode: mode.id,
+                        embeddings:
+                            data.embeddings.map(emb => {
+                                return {
+                                    name: emb,
+                                    arguments: embeddingsArguments[emb]
+                                }
+                            })
+                        ,
+                        activityThreshold: 6.5,
+                        activitySet: props.activitySets[0].id,
+                        activityType: props.activityTypes[0].id,
+                        validationStrategies:
+                            [{
+                                resourcetype: "BasicValidationStrategy",
+                                dataSplit: data.validationStrategy === "RandomSplit" ?
+                                    {
+                                        "name": "RandomSplit",
+                                        "testFraction": 0.2,
+                                        "seed": 42,
+                                    } :
+                                    {
+                                        "name": "ScaffoldSplit",
+                                        "scaffold": {"name": "BemisMurckoRDKit"},
+                                        "testFraction": 0.2
+                                    },
+                                cvFolds: 3,
+                                metrics: [mode.name === "classification" ? accuracy.id : rmse.id]
+                            }
+                            ],
+                        hyperParamOptStrategies:
+                            []
+                    }
+
+                }
+            );
+        }
+    };
+
+    const postModelData = (data, afterModelPOST) => {
+        fetch(
+            props.listURL
+            , {
+                method: 'POST'
+                , body: JSON.stringify(data)
+                , headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: "include",
+            }
+        ).then((data) => props.handleResponseErrors(data, "Creating model failed. Data wrong or incomplete?"))
+            .then(modelData => {
+                if (afterModelPOST) {
+                    return afterModelPOST(modelData);
+                }
+                return modelData;
+            })
+            .then(
+                modelData => {
+                    props.handleCreate(props.modelClass, modelData);
+                }
+            ).catch(
+            error => console.log(error)
+        );
+    };
+
+    return (
+        <React.Fragment>
+            <CardBody>
+                <Formik
+                    initialValues={{
+                        embeddings: ["MorganFP"],
+                        task: "classification",
+                        algorithms: ["RandomForestClassifier"],
+                        validationStrategy: "RandomSplit"
+                    }}
+                    onSubmit={values => {
+                        setFormIsSubmitting(true);
+                        newModelFromFormData(values)
+                        // TODO: Add scaffolds...
+                        setFormIsSubmitting(false);
+                    }}
+                >
+                    {({values, setFieldValue}) => (
+                        <Form id={`${props.chosenAlgorithm.name}-${props.formNameSuffix}-form`}>
+                            <Label>Embeddings</Label>
+                            <Field
+                                name="embeddings"
+                                as={Input}
+                                type="select"
+                                multiple
+                                value={values.embeddings}
+                                onChange={e => {
+                                    const options = Array.from(e.target.selectedOptions, option => option.value);
+                                    setFieldValue('embeddings', options);
+                                }}
+                            >
+                                {allEmbeddings.map(choice => (
+                                    <option key={choice} value={choice}>{choice}</option>
+                                ))}
+                            </Field>
+                            <Label>Tasks</Label>
+                            <Field
+                                name="task"
+                                as={Input}
+                                type="select"
+                                value={values.task}
+                                onChange={e => {
+                                    setFieldValue('task', e.target.value);
+                                    if (e.target.value === "classification") {
+                                        setFieldValue('algorithms', ["RandomForestClassifier"]);
+                                    } else {
+                                        setFieldValue('algorithms', ["RandomForestRegressor"]);
+                                    }
+                                }}
+                            >
+                                {props.chosenAlgorithm.validModes.map(choice => (
+                                    <option key={choice.name} value={choice.name}>{choice.name}</option>
+                                ))}
+                            </Field>
+                            <Label>Algorithms</Label>
+                            <Field
+                                name="algorithms"
+                                as={Input}
+                                type="select"
+                                multiple
+                                value={values.algorithms}
+                                onChange={e => {
+                                    const options = Array.from(e.target.selectedOptions, option => option.value);
+                                    setFieldValue('algorithms', options);
+                                }}
+                            >
+                                {(values.task === "classification" && allAlgorithms["classification"] ? allAlgorithms["classification"].map(choice => (
+                                    <option key={choice} value={choice}>{choice}</option>
+                                )) : null)}
+                                {(values.task === "regression" && allAlgorithms["regression"] ? allAlgorithms["regression"].map(choice => (
+                                    <option key={choice} value={choice}>{choice}</option>
+                                )) : null)}
+                            </Field>
+                            <Label>Validation strategy</Label>
+                            <Field
+                                name="validationStrategy"
+                                as={Input}
+                                type="select"
+                                value={values.validationStrategy}
+                                onChange={e => setFieldValue('validationStrategy', e.target.value)}
+                            >
+                                {Object.entries(validationStrategies).map(([key, value]) => (
+                                    <option key={key} value={value}>{key}</option>
+                                ))}
+                            </Field>
+
+                        </Form>
+                    )}
+                </Formik>
+            </CardBody>
+
+            <CardFooter>
+                <Button form={`${props.chosenAlgorithm.name}-${props.formNameSuffix}-form`} type="submit"
+                        color="primary"
+                        disabled={formIsSubmitting}>{formIsSubmitting ? "Creating..." : "Create"}</Button>
+            </CardFooter>
+        </React.Fragment>
+    )
+};
+
+export default ModelCardNewDefault;

@@ -31,10 +31,8 @@ class RoutedPage extends React.Component {
       if (showAlert) {
         this.showAlert(message);
       }
-      console.log(response);
       response.json()
         .then(data => {
-          console.log(data);
           if (callback) {
             callback(data);
           }

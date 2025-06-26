@@ -1,7 +1,7 @@
 import React from 'react';
 import {Button, Col, FormGroup, Input, Label, Row} from 'reactstrap';
 import {Field} from 'formik';
-import {algorithmsParametersKey} from './AlgorithmsField'
+import {algorithmsParametersKey, fetchAlgorithmParametersExternal} from './AlgorithmsField'
 import {useLocalStorageWithExpiry} from './LocalStorageWithExpiry';
 import {FieldErrorMessage} from '../../genui';
 
@@ -58,7 +58,7 @@ const SearchSpace = (props) => {
             newItem[name] = props.newItem("float", min ? min : 0, max ? max : 1);
             setInputType(prevState => ({...prevState, [name]: "manual"}))
         } else if (type === "str") {
-            newItem[name] = props.newItem("str");
+            newItem[name] = props.newItem("str", [constraint.choices[0]] || []);
         } else {
             console.warn(`Unknown type for ${name}: ${type}`);
         }
@@ -302,29 +302,10 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
     }
 
     const fetchAlgorithmParameters = React.useCallback(async (alg_name) => {
-        if (!alg_name || !props.apiUrls?.qsarRoot) {
-            return;
-        }
-
-        if (!internalParameters?.[alg_name]) {
-            try {
-                const url = new URL(`models/qsprpred/sklearn/${alg_name}/params`, props.apiUrls.qsarRoot);
-                const response = await fetch(url.toString(), {
-                    credentials: "include",
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch algorithm parameters: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                const updatedParams = internalParameters;
-                updatedParams[alg_name] = data;
-                setInternalParameters(updatedParams);
-            } catch (error) {
-                console.error("Error fetching algorithm parameters:", error);
-            }
-        }
+        await fetchAlgorithmParametersExternal(alg_name,{
+            apiUrls: props.apiUrls,
+            setInternalParameters,
+            internalParameters})
         fetchedRef.current[alg_name] = true;
     }, [props.apiUrls, setInternalParameters, internalParameters]);
 
@@ -369,16 +350,16 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
         } else if (type === "int" || type === "float") {
             return [type, min, max];
         } else if (type === "str") {
-            return ["categorical", []];
+            return ["categorical", min];
         }
     }
     const newItemGridSearch = (type, min = 0, max = 10) => {
         if (type === "bool") {
-            return ["categorical", [true, false]];
+            return [true, false];
         } else if (type === "int" || type === "float") {
-            return [min, max];
+            return "";
         } else if (type === "str") {
-            return ["categorical", []];
+            return min;
         }
     }
     const handleChangeValueOptuna = (name, value, type, minValue, maxValue) => {

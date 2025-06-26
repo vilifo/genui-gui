@@ -15,8 +15,11 @@ function EndpointSelector(props) {
 }
 
 function floatRange(start, end, step = 1.0) {
+    const parsedStart = Number.parseFloat(start);
+    const parsedEnd = Number.parseFloat(end);
+    const parsedStep = Number.parseFloat(step);
     const output = [];
-    for (let i = start; i < end; i += step) {
+    for (let i = parsedStart; i < parsedEnd; i += parsedStep) {
         output.push(Number(i.toFixed(12)));
     }
     return output;
@@ -168,6 +171,12 @@ export default function QSARModelCreateCard(props) {
                     const updatedValidationStrategies = [];
                     data.validationStrategies.forEach((vs) => {
                         vs["resourcetype"] = "BasicValidationStrategy";
+                        if (vs.dataSplit.name === "ScaffoldSplit") {
+                            vs.dataSplit = {
+                                ...vs.dataSplit,
+                                scaffold: {name: vs.dataSplit.scaffold}
+                            };
+                        }
                         updatedValidationStrategies.push(vs);
                     });
                     delete data.validationStrategies;
@@ -179,7 +188,7 @@ export default function QSARModelCreateCard(props) {
                             data.hyperParamOptStrategy.searchSpace = Object.fromEntries(
                                 Object.entries(data.hyperParamOptStrategy.searchSpace).map(([key, value]) => {
                                     if (Array.isArray(value)) {
-                                        return [key, value.slice(2)];
+                                        return [key, value];
                                     } else if (typeof value === "object") {
                                         return [key, floatRange(value.min, value.max, value.step)];
                                     } else if (typeof value === "string") {

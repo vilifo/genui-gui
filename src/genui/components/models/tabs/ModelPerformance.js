@@ -3,11 +3,12 @@ import { Col, Row} from 'reactstrap';
 import {ComponentWithPagedResources} from "../../../index";
 
 const ModelPerformance = (props) => {
-  const getPerfValuesForMetric = (performanceInfo, className, metric) => {
+  const getPerfValuesForMetric = (performanceInfo, className, metric, index) => {
     const ret = [];
     performanceInfo.forEach(
       perf => {
         if ((metric ? perf.metric.id === metric.id : true)
+            && (className === "ModelPerformanceCV" ? perf.extraArgs.validationIndex === index : true)
           && perf.className === className) {
           ret.push(perf);
         }
@@ -16,11 +17,11 @@ const ModelPerformance = (props) => {
     return ret;
   };
 
-  const getPerfMatrix = (performanceInfo, className, metrics) => {
+  const getPerfMatrix = (performanceInfo, className, metrics, index) => {
     const ret = {};
     metrics.forEach(
       metric => {
-        ret[metric.name] = getPerfValuesForMetric(performanceInfo, className, metric);
+        ret[metric.name] = getPerfValuesForMetric(performanceInfo, className, metric, index);
       });
     return ret;
   };
