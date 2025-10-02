@@ -1,7 +1,7 @@
 import React from 'react';
 import {Button, Col, FormGroup, Input, Label, Row} from 'reactstrap';
 import {Field} from 'formik';
-import {algorithmsParametersKey, fetchAlgorithmParametersExternal} from './AlgorithmsField'
+import {algorithmsParametersKey} from './AlgorithmsField'
 import {useLocalStorageWithExpiry} from './LocalStorageWithExpiry';
 import {FieldErrorMessage} from '../../genui';
 
@@ -10,7 +10,8 @@ const hyperGreen = '#57dc86';
 const SearchSpace = (props) => {
     const {values, setFieldValue} = props.formikProps || {};
     const searchSpace = values.hyperParamOptStrategy.searchSpace;
-    const possibleParameters = props.internalParameters[values.trainingStrategy.parameters.alg];
+    const [internalParameters,] = useLocalStorageWithExpiry(algorithmsParametersKey, {});
+    const possibleParameters = internalParameters[values.trainingStrategy.parameters.alg];
     const remainingParameters = Object.entries(possibleParameters || {}).filter(([key, value]) => !(key in searchSpace)).map(([key, value]) => key);
     const searchSpacePrefix = props.searchSpacePrefix;
     const [inputType, setInputType] = React.useState({});
@@ -199,72 +200,38 @@ const valueAggregationCacheKey = 'qsarValueAggregationCache';
 export function QSARHyperparameterOptimizationStrategyFields(props) {
     const hyperparamStrategyPrefix = props.hyperparamStrategyPrefix;
     const [hyperparamStrategies, setHyperparamStrategies] = useLocalStorageWithExpiry(hyperparamStrategiesCacheKey, [])
-    const [valueAggregations, setValueAggregations] = useLocalStorageWithExpiry(valueAggregationCacheKey, {});
+    const [valueAggregations, setValueAggregations] = useLocalStorageWithExpiry(valueAggregationCacheKey, []);
     const [loadingHyperparamStrategies, setLoadingHyperparamStrategies] = React.useState(false);
-    const [internalParameters, setInternalParameters] = useLocalStorageWithExpiry(algorithmsParametersKey, {});
     const {values, setFieldValue} = props.formikProps || {};
     const fetchedRef = React.useRef({});
     const metrics = props.metrics;
+    const fetchResource = props.fetchResource;
 
     const fetchHyperparamStrategies = React.useCallback(async () => {
-        if (!props.apiUrls || !props.apiUrls.qsarRoot) {
-            console.error("API URLs not provided");
-            return;
-        }
-
         if (hyperparamStrategies.length > 0) {
             return;
         }
 
         setLoadingHyperparamStrategies(true);
-        try {
-            const url = new URL(`hyper-parameters/list/`, props.apiUrls.qsarRoot);
-            const response = await fetch(url.toString(), {
-                credentials: "include",
-            });
-            if (!response.ok) {
-                throw new Error(`Failed to fetch strategies: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            if (!data.includes("None")) {
-                data.unshift("None");
-            }
-            setHyperparamStrategies(data);
-        } catch (error) {
-            console.error("Error fetching strategies:", error);
-        } finally {
-            setLoadingHyperparamStrategies(false);
+        const data = await fetchResource(`hyper-parameters/list/`);
+        if (!data) return
+        if (!data.includes("None")) {
+            data.unshift("None");
         }
+        setHyperparamStrategies(data);
+        setLoadingHyperparamStrategies(false);
 
-    }, [props.apiUrls, hyperparamStrategies, setHyperparamStrategies]);
+    }, [fetchResource, hyperparamStrategies, setHyperparamStrategies]);
 
     const fetchValueAggregations = React.useCallback(async () => {
-        if (!props.apiUrls || !props.apiUrls.qsarRoot) {
-            console.error("API URLs not provided");
-            return;
-        }
-
         if (valueAggregations.length > 0) {
             return;
         }
+        const data = await fetchResource(`aggregation-functions/`);
+        if (! data) return
+        setValueAggregations(data);
 
-        try {
-            const url = new URL(`aggregation-functions/`, props.apiUrls.qsarRoot);
-            const response = await fetch(url.toString(), {
-                credentials: "include",
-            });
-            if (!response.ok) {
-                throw new Error(`Failed to fetch value aggregations: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            setValueAggregations(data);
-        } catch (error) {
-            console.error("Error fetching algorithms:", error);
-        }
-
-    }, [props.apiUrls, valueAggregations, setValueAggregations]);
+    }, [fetchResource, valueAggregations, setValueAggregations]);
 
     const initParameters = React.useCallback((strategyName) => {
         if (!valueAggregations.length || !metrics.length) return null;
@@ -301,14 +268,6 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
         setHyperParamOptStrategyParameters(selectedStrategy);
     }
 
-    const fetchAlgorithmParameters = React.useCallback(async (alg_name) => {
-        await fetchAlgorithmParametersExternal(alg_name,{
-            apiUrls: props.apiUrls,
-            setInternalParameters,
-            internalParameters})
-        fetchedRef.current[alg_name] = true;
-    }, [props.apiUrls, setInternalParameters, internalParameters]);
-
     const currentStrategy = values && values?.hyperParamOptStrategy
         ? values.hyperParamOptStrategy.resourcetype
         : "None";
@@ -321,18 +280,13 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
             if (Object.keys(valueAggregations).length === 0) {
                 await fetchValueAggregations();
             }
-            if (!internalParameters[values.trainingStrategy?.parameters?.alg]) {
-                await fetchAlgorithmParameters(values.trainingStrategy?.parameters?.alg);
-            }
         };
 
         fetchInitialData();
     }, [fetchHyperparamStrategies,
         fetchValueAggregations,
-        hyperparamStrategies.length,
+        hyperparamStrategies,
         valueAggregations,
-        fetchAlgorithmParameters,
-        internalParameters,
         values.trainingStrategy?.parameters?.alg
     ]);
 
@@ -418,7 +372,6 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
             setFieldValue(`${hyperparamStrategyPrefix}.searchSpace.${name}.${type}`, value);
         }
     };
-
 
 
     // React.useEffect(() => {
@@ -647,7 +600,6 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
                                         <SearchSpace
                                             {...props}
                                             searchSpacePrefix={`${hyperparamStrategyPrefix}.searchSpace`}
-                                            internalParameters={internalParameters}
                                             newItem={newItemOptuna}
                                             categoricalName={(prefix, name) => `${prefix}.${name}[1]`}
                                             handleChangeValue={handleChangeValueOptuna}
@@ -656,8 +608,7 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
                                         <SearchSpace
                                             {...props}
                                             searchSpacePrefix={`${hyperparamStrategyPrefix}.searchSpace`}
-                                            internalParameters={internalParameters}
-                                            newItem={newItemGridSearch}
+                                             newItem={newItemGridSearch}
                                             categoricalName={(prefix, name) => `${prefix}.${name}`}
                                             handleChangeValue={handleChangeValueGridSearch}
                                             renderNumericItem={renderNumericItemGridSearch}

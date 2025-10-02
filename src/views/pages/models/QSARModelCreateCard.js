@@ -27,6 +27,29 @@ function floatRange(start, end, step = 1.0) {
 
 export default function QSARModelCreateCard(props) {
     let molsets = [];
+    const fetchingList = [];
+
+    const fetchResource = async (resourceURL) => {
+        if (!resourceURL || fetchingList.includes(resourceURL)) {
+            return null;
+        }
+        fetchingList.push(resourceURL);
+        try {
+            const url = new URL(resourceURL, props.apiUrls.qsarRoot);
+            const response = await fetch(url.toString(), {
+                credentials: "include",
+            });
+            if (!response.ok) {
+                console.error(`Error fetching resource: ${response.status} ${response.statusText}`);
+                return null;
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Error fetching resource:", error);
+            return null;
+        }
+    }
+
     Object.keys(props.compoundSets).forEach(
         (key) => molsets = molsets.concat(props.compoundSets[key])
     );
@@ -146,6 +169,7 @@ export default function QSARModelCreateCard(props) {
             trainingStrategySchema={trainingStrategySchema}
             validationStrategiesSchema={validationStrategiesSchema}
             extraParamsSchema={extraParamsSchema}
+            fetchResource={fetchResource}
             trainingStrategyFields={QSARTrainingFields}
             validationStrategiesFields={QSARValidationStrategies}
             extraFields={QSARExtraFields}

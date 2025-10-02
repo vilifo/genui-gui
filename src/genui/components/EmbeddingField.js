@@ -6,81 +6,22 @@ import useLocalStorageWithExpiry from "./LocalStorageWithExpiry";
 
 export const embeddingsListKey = 'embeddingsCache_list';
 export const embeddingsArgumentsKey = 'embeddingsCache_arguments';
-const fetchingArguments = {};
 
-export async function fetchEmbeddingsExternal({apiUrls, allEmbeddings, setAllEmbeddings}) {
-    if (!apiUrls || !apiUrls.qsarRoot) {
-        console.error("API URLs not provided");
-        return;
-    }
-
-    if (allEmbeddings.length > 0) {
-        return;
-    }
-
-    try {
-        const url = new URL('embeddings/list/', apiUrls.qsarRoot);
-        const response = await fetch(url.toString(), {
-            credentials: "include",
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch embeddings: ${response.statusText}`);
+export const processArguments = (data) => {
+    const processedData = {};
+    Object.entries(data).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+            const array_data = {};
+            Object.entries(value).forEach(([subkey, subvalue]) => {
+                array_data[subvalue] = false;
+            });
+            processedData[key] = array_data;
+        } else {
+            processedData[key] = value;
         }
-
-        const data = await response.json();
-        setAllEmbeddings(data);
-    } catch (error) {
-        console.error("Error fetching embeddings:", error);
-    }
-}
-
-export async function fetchEmbeddingArgumentsExternal(emb_name, {
-    apiUrls,
-    embeddingsArguments,
-    setEmbeddingsArguments
-}) {
-    if (!emb_name) return;
-    if (!apiUrls || !apiUrls.qsarRoot) {
-        console.error("API URLs not provided");
-        return;
-    }
-
-    const processArguments = (data) => {
-        const processedData = {};
-        Object.entries(data).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-                const array_data = {};
-                Object.entries(value).forEach(([subkey, subvalue]) => {
-                    array_data[subvalue] = false;
-                });
-                processedData[key] = array_data;
-            } else {
-                processedData[key] = value;
-            }
-        });
-        return processedData;
-    };
-
-    try {
-        const url = new URL(`embeddings/${emb_name}/arguments`, apiUrls.qsarRoot);
-        const response = await fetch(url.toString(), {
-            credentials: "include",
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch embedding arguments: ${response.statusText}`);
-        }
-
-        let data = await response.json();
-        data = processArguments(data);
-        const updateEmbeddingsArguments = {...embeddingsArguments};
-        updateEmbeddingsArguments[emb_name] = data;
-        setEmbeddingsArguments(updateEmbeddingsArguments);
-    } catch (error) {
-        console.error("Error fetching embedding arguments:", error);
-    }
-}
+    });
+    return processedData;
+};
 
 export function EmbeddingsField(props) {
     const embeddingPrefix = props.embeddingPrefix;
@@ -91,6 +32,7 @@ export function EmbeddingsField(props) {
     const [loadingEmbeddings, setLoadingEmbeddings] = React.useState(false);
     const {values, setFieldValue} = props.formikProps || {};
     const fetchedRef = React.useRef({});
+    const fetchResource = props.fetchResource;
 
     const addEmbedding = () => {
         if (values && setFieldValue) {
@@ -115,16 +57,17 @@ export function EmbeddingsField(props) {
     };
 
     const fetchEmbeddings = React.useCallback(async () => {
+        if (allEmbeddings.length > 0) {
+            return;
+        }
         setLoadingEmbeddings(true);
-        await fetchEmbeddingsExternal({
-            apiUrls: props.apiUrls,
-            allEmbeddings,
-            setAllEmbeddings
-        })
+        const data = await fetchResource('embeddings/list/')
+        if (data) setAllEmbeddings(data);
         setLoadingEmbeddings(false);
-    }, [props.apiUrls, allEmbeddings, setAllEmbeddings]);
+    }, [fetchResource, allEmbeddings, setAllEmbeddings]);
 
     const fetchEmbeddingArguments = React.useCallback(async (emb_name) => {
+        if (!emb_name) return;
         const setArguments = (data) => {
             fetchedRef.current[emb_name] = true;
             if (values && setFieldValue) {
@@ -147,35 +90,15 @@ export function EmbeddingsField(props) {
             return;
         }
 
-        if (fetchingArguments[emb_name]) {
-            setLoading(true);
-            const checkCache = () => {
-                if (!embeddingsArguments[emb_name]) {
-                    setLoading(false);
-                    return true;
-                }
-                return false;
-            };
-
-            const intervalId = setInterval(() => {
-                if (checkCache()) {
-                    clearInterval(intervalId);
-                }
-            }, 100);
-
-            return;
-        }
-
-        fetchingArguments[emb_name] = true;
         setLoading(true);
-        await fetchEmbeddingArgumentsExternal(emb_name, {
-            apiUrls: props.apiUrls,
-            embeddingsArguments: embeddingsArguments,
-            setEmbeddingsArguments: setEmbeddingsArguments
-        });
-        fetchingArguments[emb_name] = false;
+        let data = await fetchResource(`embeddings/${emb_name}/arguments`);
+        if (!data) return
+        data = processArguments(data);
+        const updateEmbeddingsArguments = {...embeddingsArguments};
+        updateEmbeddingsArguments[emb_name] = data;
+        setEmbeddingsArguments(updateEmbeddingsArguments);
         setLoading(false);
-    }, [props.apiUrls, values, setFieldValue, currentIndex, embeddingsArguments, setEmbeddingsArguments]);
+    }, [fetchResource, values, setFieldValue, currentIndex, embeddingsArguments, setEmbeddingsArguments]);
 
     const handleEmbeddingChange = (event) => {
         const selectedEmbeddingId = event.target.value;
@@ -317,7 +240,6 @@ export function EmbeddingsField(props) {
                 </FormGroup>
                 <FieldErrorMessage name={`${embeddingPrefix}.name`}/>
 
-                {/* Display embedding arguments if available */}
                 {loading ? (
                     <p>Loading arguments...</p>
                 ) : values && values.trainingStrategy && values.trainingStrategy.embeddings && currentIndex !== null ? (

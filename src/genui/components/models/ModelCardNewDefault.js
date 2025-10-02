@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {
     CardBody,
     Input,
@@ -10,11 +10,9 @@ import {Field, Formik, Form} from "formik";
 import useLocalStorageWithExpiry from "../LocalStorageWithExpiry";
 import {
     embeddingsListKey,
-    embeddingsArgumentsKey,
-    fetchEmbeddingsExternal,
-    fetchEmbeddingArgumentsExternal
+    processArguments,
 } from "../EmbeddingField"
-import {algorithmsListKey, fetchAlgorithmsExternal} from "../AlgorithmsField"
+import {algorithmsListKey} from "../AlgorithmsField"
 
 const ModelCardNewDefault = (props) => {
     const [allEmbeddings, setAllEmbeddings] = useLocalStorageWithExpiry(embeddingsListKey, [])
@@ -22,25 +20,45 @@ const ModelCardNewDefault = (props) => {
         Object.fromEntries(props.chosenAlgorithm.validModes.map(mode => [mode.name, []])));
     const [formIsSubmitting, setFormIsSubmitting] = React.useState(false);
     const validationStrategies = {"Random": "RandomSplit", "Scaffold": "ScaffoldSplit"};
+    const fetchingList = React.useState([]);
 
-    const fetchEmbeddings = React.useCallback(() => {
-        fetchEmbeddingsExternal({
-            apiUrls: props.apiUrls,
-            allEmbeddings: allEmbeddings,
-            setAllEmbeddings: setAllEmbeddings
-        })
-    }, [props.apiUrls, allEmbeddings, setAllEmbeddings]);
-
-    const fetchAlgorithms = React.useCallback(() => {
-        for (const mode of Object.keys(allAlgorithms)) {
-            fetchAlgorithmsExternal({
-                apiUrls: props.apiUrls,
-                currentMode: mode,
-                allAlgorithms: allAlgorithms,
-                setAllAlgorithms: setAllAlgorithms
-            })
+    const fetchResource = React.useCallback(async (resourceURL) => {
+        if (!resourceURL || fetchingList.includes(resourceURL)) {
+            return null;
         }
-    }, [props.apiUrls, allAlgorithms, setAllAlgorithms]);
+        fetchingList.push(resourceURL);
+        try {
+            const url = new URL(resourceURL, props.apiUrls.qsarRoot);
+            const response = await fetch(url.toString(), {
+                credentials: "include",
+            });
+            if (!response.ok) {
+                console.error(`Error fetching resource: ${response.status} ${response.statusText}`);
+                return null;
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Error fetching resource:", error);
+            return null;
+        }
+    }, [props.apiUrls, fetchingList]);
+
+    const fetchEmbeddings = React.useCallback(async () => {
+        if (allEmbeddings.length > 0) {
+            return;
+        }
+        const data = await fetchResource('embeddings/list/')
+        if (!data) return
+        setAllEmbeddings(data);
+    }, [fetchResource, allEmbeddings, setAllEmbeddings]);
+
+    const fetchAlgorithms = React.useCallback(async () => {
+        for (const mode of Object.keys(allAlgorithms)) {
+            const data = await fetchResource(`models/qsprpred/sklearn/mode/${mode}/`);
+            if (!data) return
+            setAllAlgorithms({...allAlgorithms, [mode]: data});
+        }
+    }, [fetchResource, allAlgorithms, setAllAlgorithms]);
 
     React.useEffect(() => {
         if (allEmbeddings.length === 0) {
@@ -49,17 +67,15 @@ const ModelCardNewDefault = (props) => {
         if (Object.keys(allAlgorithms).length === 0) {
             fetchAlgorithms();
         }
-    })
+    }, [fetchEmbeddings, allEmbeddings, fetchAlgorithms, allAlgorithms]);
 
 
     const newModelFromFormData = async (data) => {
         const embeddingsArguments = {};
         for (const emb of data.embeddings) {
-            await fetchEmbeddingArgumentsExternal(emb, {
-                apiUrls: props.apiUrls,
-                embeddingsArguments: embeddingsArguments,
-                setEmbeddingsArguments: data => embeddingsArguments[emb] = data[emb],
-            })
+            const args = processArguments(await fetchResource(`embeddings/${emb}/arguments`));
+            if (!args) return
+            embeddingsArguments[emb] = args[emb];
         }
         const accuracy = props.metrics.find(m => m.name === "Accuracy");
         const rmse = props.metrics.find(m => m.name === "RMSE");
