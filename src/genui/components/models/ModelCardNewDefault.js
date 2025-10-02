@@ -8,10 +8,7 @@ import {
 } from 'reactstrap';
 import {Field, Formik, Form} from "formik";
 import useLocalStorageWithExpiry from "../LocalStorageWithExpiry";
-import {
-    embeddingsListKey,
-    processArguments,
-} from "../EmbeddingField"
+import {embeddingsListKey} from "../EmbeddingField"
 import {algorithmsListKey} from "../AlgorithmsField"
 
 const ModelCardNewDefault = (props) => {
@@ -73,9 +70,7 @@ const ModelCardNewDefault = (props) => {
     const newModelFromFormData = async (data) => {
         const embeddingsArguments = {};
         for (const emb of data.embeddings) {
-            const args = processArguments(await fetchResource(`embeddings/${emb}/arguments`));
-            if (!args) return
-            embeddingsArguments[emb] = args[emb];
+            embeddingsArguments[emb] = await fetchResource(`embeddings/${emb}/arguments`)
         }
         const accuracy = props.metrics.find(m => m.name === "Accuracy");
         const rmse = props.metrics.find(m => m.name === "RMSE");

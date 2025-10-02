@@ -200,8 +200,9 @@ export function QSARValidationStrategies(props) {
             if (!response.ok) {
                 throw new Error(`Failed to fetch data splits: ${response.statusText}`);
             }
-
-            const data = await response.json();
+            const no_array = ["BootstrapSplit", "GBMTDataSplit", "ClusterSplit"]
+            let data = await response.json();
+            data = data.filter(split => !no_array.includes(split))
             setAllDataSplits(data);
         } catch (error) {
             console.error("Error fetching algorithms:", error);

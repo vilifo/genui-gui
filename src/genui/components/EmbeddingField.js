@@ -13,7 +13,7 @@ export const processArguments = (data) => {
         if (Array.isArray(value)) {
             const array_data = {};
             Object.entries(value).forEach(([subkey, subvalue]) => {
-                array_data[subvalue] = false;
+                array_data[subvalue] = true;
             });
             processedData[key] = array_data;
         } else {
@@ -157,20 +157,13 @@ export function EmbeddingsField(props) {
                 <div className="mt-2">
                     {Object.entries(paramValue).map(([key, value]) => (
                         <div key={key} className="form-check" style={{margin: '5px'}}>
-                            <Field>
-                                {({field}) => (
-                                    <input
-                                        {...field}
-                                        type="checkbox"
-                                        className="form-check-input"
-                                        id={`${embeddingPrefix}-${paramName}-${key}`}
-                                        checked={field.value}
-                                        onChange={(e) => {
-                                            handleListItemChange(paramName, key, e.target.checked);
-                                        }}
-                                    />
-                                )}
-                            </Field>
+                            <Field
+                                as={Input}
+                                name={`${embeddingPrefix}.arguments.${paramName}.${key}`}
+                                type="checkbox"
+                                onChange={(e) => {
+                                handleListItemChange(paramName, key, e.target.checked);}}
+                            />
                             <FieldErrorMessage name={`${embeddingPrefix}.arguments.${paramName}`}/>
                             <label className="form-check-label" htmlFor={`${embeddingPrefix}-${paramName}-${key}`}>
                                 {key}

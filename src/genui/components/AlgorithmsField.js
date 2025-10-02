@@ -34,7 +34,10 @@ export function AlgorithmsField(props) {
         let params;
         if (!internalParameters[alg_name]) {
             const data = await fetchResource(`models/qsprpred/sklearn/${alg_name}/params`)
-            if (!data) return;
+            if (!data) {
+                setLoading(false);
+                return;
+            }
             setInternalParameters({...internalParameters, [alg_name]: data});
             params = Object.fromEntries(
                 Object.entries(data).map(([key, value]) => [key, value.value]));
