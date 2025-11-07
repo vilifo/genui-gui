@@ -1,7 +1,7 @@
 import React from 'react';
 import {Table} from 'reactstrap';
 import {TableDataFromItems, TableFromItems} from '../../../../genui';
-import {ROCCurvePlot} from "./Plots";
+import {MetricCurvePlot} from "./Plots";
 
 function parseCVData(perfMatrix) {
     const ret = {};
@@ -56,26 +56,33 @@ function parseCVData(perfMatrix) {
 
 function CVOverview(props) {
     const metrics = props.model.trainingStrategy.validationStrategies[props.index].metrics;
-    const validationIndex = props.index;
-    const cvPerf = props.getPerfMatrix(props.performance, 'ModelPerformanceCV', metrics, validationIndex);
-    const roc_curve_data = props.getPerfValuesForMetric(props.performance, "ROCCurvePoint", metrics.find(metric => metric.name === "ROC"), validationIndex);
-    const curves = {};
-    if (cvPerf["ROC"]) {
-        cvPerf["ROC"].forEach(auc => {
-            curves[auc.id] = []
-        });
-        roc_curve_data.forEach(point => {
-            if (curves.hasOwnProperty(point.extraArgs.auc)) {
-                curves[point.extraArgs.auc].push(point);
-            }
-        });
-    }
-    const curves_list = [];
-    Object.keys(curves).forEach((key, index) => {
-        curves_list.push({
-            label: `Fold ${index + 1}`,
-            tpr: curves[key].map(point => point.value),
-            fpr: curves[key].map(point => point.extraArgs.fpr),
+    const validationStrategyIndex = props.index;
+    const cvPerf = props.getPerfMatrix(props.performance, 'ModelPerformanceCV', metrics, validationStrategyIndex);
+    const curves = metrics.filter(metric => metric.includes("curve"))
+    const curves_data = props.getPerfValuesForMetric(props.performance, "MetricCurvePoint", curves[0], validationStrategyIndex);
+    const curves_points = {};
+    curves.forEach(curve => {
+        if (cvPerf[curve]) {
+            curves_points[curve] = {};
+            cvPerf[curve].forEach(auc => {
+                curves_points[curve][auc.id] = []
+            });
+            curves_data.forEach(point => {
+                if (curves_points[curve].hasOwnProperty(point.extraArgs.auc)) {
+                    curves_points[curve][point.extraArgs.auc].push(point);
+                }
+            });
+        }
+    })
+    const curves_lists = {};
+    Object.keys(curves_points).forEach((metric) => {
+        curves_lists[metric] = [];
+        Object.keys(curves_points[metric]).forEach((key, index) => {
+            curves_lists[metric].push({
+                label: `Fold ${index + 1}`,
+                dependent: curves_points[metric][key].map(point => point.value),
+                independent: curves_points[metric][key].map(point => point.extraArgs.independent),
+            })
         })
     });
     return (
@@ -86,16 +93,21 @@ function CVOverview(props) {
                 Object.keys(cvPerf).length > 0 ? (
                     <React.Fragment>
                         {
-                            curves_list.length > 0 ? (
-                                <ROCCurvePlot curves={curves_list} title="Cross-Validation ROC Curves"/>
-                            ) : null
+                            curves_lists ? Object.keys(curves_lists).map(metric => (
+                                <MetricCurvePlot
+                                    key={metric}
+                                    curves={curves_lists[metric]}
+                                    title={`Cross-Validation ${metric} Curves`}
+                                    name={metric}
+                                />
+                            )) : null
                         }
 
                         <h5>Metrics Summary</h5>
                         <Table size="sm" hover>
                             <TableFromItems
                                 items={parseCVData(cvPerf)}
-                                parseHeaderItem={item => item === "ROC" ? "ROC (AUC)" : item}
+                                parseHeaderItem={item => item.includes("curve") ? (item + " (AUC)") : item}
                             />
                         </Table>
                     </React.Fragment>
@@ -105,25 +117,44 @@ function CVOverview(props) {
     )
 }
 
-function IndpendentTestSetOverview(props) {
+function IndependentTestSetOverview(props) {
     const metrics = props.model.trainingStrategy.validationStrategies[props.index].metrics;
     let validSetPerf = props.getPerfMatrix(props.performance, 'ModelPerformance', metrics);
-    validSetPerf = Object.keys(validSetPerf).map((x) => validSetPerf[x].length > 0 ? validSetPerf[x][0] : null);
-
-    if (validSetPerf.length === 0 || validSetPerf[0] === null || validSetPerf.includes(null)) {
-        return null
+    for (const metric of Object.keys(validSetPerf)) {
+        if (validSetPerf[metric].length === 0) {
+            return null;
+        }
     }
-
-    const roc_curve_data = props.getPerfValuesForMetric(props.performance, "ROCCurvePoint", metrics.find(metric => metric.name === "ROC"));
-    const auc = validSetPerf.find(item => item ? item.metric.name === "ROC" : false);
-    const roc_curve = [];
-    if (auc) {
-        roc_curve_data.forEach(point => {
-            if (point.extraArgs.auc === auc.id) {
-                roc_curve.push(point);
-            }
+    const curves = metrics.filter(metric => metric.includes("curve"))
+    const curves_data = Object.fromEntries(
+        curves.map(curve => [curve, props.getPerfValuesForMetric(props.performance, "MetricCurvePoint", curve)])
+    );
+    const curves_points = {};
+    curves.forEach(curve => {
+        if (validSetPerf[curve]) {
+            curves_points[curve] = {};
+            validSetPerf[curve].forEach(auc => {
+                curves_points[curve][auc.id] = []
+            });
+            curves_data[curve].forEach(point => {
+                if (curves_points[curve].hasOwnProperty(point.extraArgs.auc)) {
+                    curves_points[curve][point.extraArgs.auc].push(point);
+                }
+            });
+        }
+    })
+    const curves_lists = {};
+    Object.keys(curves_points).forEach((metric) => {
+        curves_lists[metric] = [];
+        Object.keys(curves_points[metric]).forEach((key, index) => {
+            curves_lists[metric].push({
+                dependent: curves_points[metric][key].map(point => point.value),
+                independent: curves_points[metric][key].map(point => point.extraArgs.independent),
+                label: "Independent Set"
+            })
         })
-    }
+    });
+    validSetPerf = Object.keys(validSetPerf).map((x) => validSetPerf[x].length > 0 ? validSetPerf[x][0] : null);
     return (
         <React.Fragment>
             <h4>Independent Validation Set</h4>
@@ -132,15 +163,13 @@ function IndpendentTestSetOverview(props) {
                 validSetPerf[0] !== null ? (
                     <React.Fragment>
                         {
-                            roc_curve.length > 0 ? (
-                                <ROCCurvePlot curves={[
-                                    {
-                                        tpr: roc_curve.map(point => point.value),
-                                        fpr: roc_curve.map(point => point.extraArgs.fpr),
-                                        label: "Independent Set"
-                                    }
-                                ]} title="ROC Curve (Independent Test Set)"/>
-                            ) : null
+                            curves_lists ? Object.keys(curves_lists).map(metric => (
+                                <MetricCurvePlot
+                                    key={metric}
+                                    curves={curves_lists[metric]}
+                                    name={metric}
+                                    title={`${metric} (Independent Test Set)`}/>
+                            )) : null
                         }
 
                         <h5>Metrics Summary</h5>
@@ -149,8 +178,8 @@ function IndpendentTestSetOverview(props) {
                                 items={validSetPerf}
                                 dataProps={['value']}
                                 conversion={(item) => typeof item === 'number' ? item.toPrecision(4) : item.toString()}
-                                rowHeaderProp="metric.name"
-                                parseRowHeader={header => header === "ROC" ? "ROC (AUC)" : header}
+                                rowHeaderProp="metric"
+                                parseRowHeader={header => header.includes("curve") ? (header + " (AUC)") : header}
                             />
                         </Table>
                     </React.Fragment>
@@ -171,7 +200,7 @@ const QSARPerformanceOverview = (props) => {
                 <div key={`qsar-models-performance-overview-strategy-${index}`}>
                     <h3>Validation strategy {index + 1}</h3>
                     <div className={"border rounded p-3"}>
-                        <IndpendentTestSetOverview {...props} index={index}/>
+                        <IndependentTestSetOverview {...props} index={index}/>
                         <CVOverview {...props} index={index}/>
                     </div>
                 </div>

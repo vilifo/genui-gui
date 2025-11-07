@@ -115,7 +115,7 @@ function ModelInfo({
         },
         {
             name: "Metrics",
-            value: validationStrategy.metrics.map((metric) => `${metric.name}`).join(";")
+            value: validationStrategy.metrics.map((metric) => `${metric}`).join(";")
         }
     ]) : []).concat(extraValidationParams || []);
 

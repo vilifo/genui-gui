@@ -143,7 +143,7 @@ export class DrugExNetCreateCard extends React.Component {
         Yup.object().shape({
           validSetSize: Yup.number().integer().min(0, 'Validation set size must be positive or zero.'),
           dataSplit: Yup.object(),
-          metrics: Yup.array().of(Yup.number().positive('Metric ID must be a positive integer.'))
+          metrics: Yup.array().of(Yup.string().required('You need to select a metric.'))
     }));
     const trainingStrategySchema = {
       inputType: Yup.string().required("You have to specify input type."),

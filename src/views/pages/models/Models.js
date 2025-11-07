@@ -14,7 +14,7 @@ function Models(props) {
     algorithmChoices : new URL('algorithms/', props.apiUrls.qsarRoot),
     embeddings: new URL('embeddings/list/', props.apiUrls.qsarRoot),
     metrics: new URL('metrics/', props.apiUrls.qsarRoot),
-    dataSplits: new URL('data-splits/list/', props.apiUrls.qsarRoot),
+    dataSplits: new URL('data-splits/', props.apiUrls.qsarRoot),
   };
   const definitions = {
     QSARModel: {

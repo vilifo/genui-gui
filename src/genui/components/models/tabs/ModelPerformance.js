@@ -7,8 +7,8 @@ const ModelPerformance = (props) => {
     const ret = [];
     performanceInfo.forEach(
       perf => {
-        if ((metric ? perf.metric.id === metric.id : true)
-            && (className === "ModelPerformanceCV" ? perf.extraArgs.validationIndex === index : true)
+        if ((metric ? (perf.metric === metric || perf.metric === (metric + "_score")) : true)
+            && (className === "ModelPerformanceCV" ? perf.extraArgs.validationStrategyIndex === index : true)
           && perf.className === className) {
           ret.push(perf);
         }
@@ -21,7 +21,7 @@ const ModelPerformance = (props) => {
     const ret = {};
     metrics.forEach(
       metric => {
-        ret[metric.name] = getPerfValuesForMetric(performanceInfo, className, metric, index);
+        ret[metric] = getPerfValuesForMetric(performanceInfo, className, metric, index);
       });
     return ret;
   };

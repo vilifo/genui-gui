@@ -239,8 +239,8 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
         return {
             resourcetype: strategyName,
             searchSpace: {},
-            scoreAggregation: valueAggregations[0].id,
-            metric: metrics[0].id,
+            scoreAggregation: valueAggregations[0],
+            metric: metrics[0],
             ...(strategyName === "OptunaOptimization" ? {nTrials: 10} : {})
         };
     }, [metrics, valueAggregations]);
@@ -374,26 +374,6 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
     };
 
 
-    // React.useEffect(() => {
-    //     if (values?.searchSpace) {
-    //         for (const [key, value] of Object.entries(values.searchSpace)) {
-    //             if (typeof value === "object") {
-    //                 if (
-    //                     !isNaN(values.searchSpace?.[key].min) &&
-    //                     !isNaN(values.searchSpace?.[key].max) &&
-    //                     !isNaN(values.searchSpace?.[key].step)) {
-    //                     const newValue = floatRange(
-    //                         Number.parseFloat(values.searchSpace[key].min),
-    //                         Number.parseFloat(values.searchSpace[key].max),
-    //                         Number.parseFloat(values.searchSpace[key].step));
-    //                     setFieldValue(`${hyperparamStrategyPrefix}.searchSpace.${key}`, newValue);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }, [values?.searchSpace, hyperparamStrategyPrefix, setFieldValue]);
-
-
     const renderNumericItemOptuna = (type, name, handleRemoveItem, inputType, setInputType, minValue, maxValue) => {
         return (
             <div key={`${name}-number`} className="p-2 rounded" style={{background: hyperGreen}}>
@@ -464,8 +444,8 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
                                         } else if (e.target.value === "range") {
                                             setFieldValue(`${hyperparamStrategyPrefix}.searchSpace.${name}`,
                                                 {
-                                                    min: minValue ? minValue : (type === "int" ? 1 : 0),
-                                                    max: maxValue ? maxValue : (type === "int" ? 10 : 1),
+                                                    min: minValue ? minValue : (type === "int" ? 1 : 0.0),
+                                                    max: maxValue ? maxValue : (type === "int" ? 10 : 1.0),
                                                     step: type === "int" ? 1 : 0.1
                                                 });
                                         }
@@ -642,8 +622,8 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
                                     <Col sm={8}>
                                         <Field name={`${hyperparamStrategyPrefix}.metrics`} as={Input} type="select">
                                             {metrics.map(metric => (
-                                                <option key={metric.id} value={metric.id}>
-                                                    {metric.name}
+                                                <option key={metric} value={metric}>
+                                                    {metric}
                                                 </option>
                                             ))}
                                         </Field>
@@ -666,8 +646,8 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
                                             type="select"
                                         >
                                             {valueAggregations.map(agg => (
-                                                <option key={agg.id} value={agg.id}>
-                                                    {agg.name}
+                                                <option key={agg} value={agg}>
+                                                    {agg}
                                                 </option>
                                             ))}
                                         </Field>

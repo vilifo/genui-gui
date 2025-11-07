@@ -71,8 +71,8 @@ export default function QSARModelCreateCard(props) {
     };
     const validationStrategiesInit = [{
         cvFolds: 3,
-        metrics: [props.metrics[0].id],
-        dataSplit: {name: "RandomSplit"},
+        metrics: [props.metrics[0]],
+        dataSplit: {name: "qsprpred.data.sampling.splits.RandomSplit"},
     }];
     const extraParamInit = {
         molset: molset ? molset.id : undefined,
@@ -95,7 +95,7 @@ export default function QSARModelCreateCard(props) {
         Yup.object().shape({
             cvFolds: Yup.number().integer().min(0, 'Number of CV folds must be at least 0.'),
             dataSplit: Yup.object(),
-            metrics: Yup.array().of(Yup.number().positive('Metric ID must be a positive integer.'))
+            metrics: Yup.array().of(Yup.string().required('You need to select a metric.'))
         })
     );
 
@@ -208,19 +208,40 @@ export default function QSARModelCreateCard(props) {
                 }
                 if (data.hyperParamOptStrategy) {
                     if (data.hyperParamOptStrategy.resourcetype !== "None") {
+                        const newSearchSpace = [];
                         if (data.hyperParamOptStrategy.resourcetype === "GridSearchOptimization") {
-                            data.hyperParamOptStrategy.searchSpace = Object.fromEntries(
-                                Object.entries(data.hyperParamOptStrategy.searchSpace).map(([key, value]) => {
-                                    if (Array.isArray(value)) {
-                                        return [key, value];
-                                    } else if (typeof value === "object") {
-                                        return [key, floatRange(value.min, value.max, value.step)];
-                                    } else if (typeof value === "string") {
-                                        return [key, value.split(';').map(v => Number.parseFloat(v.trim())).filter(v => !isNaN(v))];
-                                    }
+                            for (const [key, value] of Object.entries(data.hyperParamOptStrategy.searchSpace)) {
+                                if (Array.isArray(value)) {
+                                    newSearchSpace.push({name: key, type: "sequence", value: value});
+                                } else if (typeof value === "object") {
+                                    newSearchSpace.push({name:key, type:"sequence",
+                                        value:floatRange(value.min, value.max, value.step)});
+                                } else if (typeof value === "string") {
+                                    newSearchSpace.push({name:key, type:"sequence",
+                                        value:value.split(';').map(v =>
+                                            Number.parseFloat(v.trim())).filter(v => !isNaN(v))});
+                                } else {
                                     return [key, value];
-                                }));
+                                }
+                            }
+                        } else if (data.hyperParamOptStrategy.resourcetype === "OptunaOptimization") {
+                            for (const [key, value] of Object.entries(data.hyperParamOptStrategy.searchSpace)) {
+                                if (value[0] === "categorical") {
+                                    newSearchSpace.push({
+                                        name: key,
+                                        type: "categorical",
+                                        choices: value[1]
+                                    });
+                                } else {
+                                    newSearchSpace.push({
+                                        name: key,
+                                        type: value[0],
+                                        value: [value[1], value[2]],
+                                    });
+                                }
+                            }
                         }
+                        data.hyperParamOptStrategy.searchSpace = newSearchSpace;
                         data.trainingStrategy["hyperParamOptStrategies"] = [data.hyperParamOptStrategy]
                     }
                     delete data.hyperParamOptStrategy;
@@ -228,6 +249,7 @@ export default function QSARModelCreateCard(props) {
                         delete data.searchSpace;
                     }
                 }
+                console.log(data);
                 return data;
             }}
         />

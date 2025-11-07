@@ -3,9 +3,20 @@ import 'chart.js/auto';
 import { Chart } from 'react-chartjs-2';
 import React from "react";
 
-export function ROCCurvePlot(props) {
+export function MetricCurvePlot(props) {
     if (props.curves.length === 0) {
         return null
+    }
+    const axes_names = {x: "Independent", y: "Dependent"};
+    if (props.name === "roc_curve"){
+        axes_names.x = "False Positive Rate";
+        axes_names.y = "True Positive Rate";
+    } else if (props.name === "precision_recall_curve"){
+        axes_names.x = "Recall";
+        axes_names.y = "Precision";
+    } else if (props.name === "det_curve"){
+        axes_names.x = "False Positive Rate";
+        axes_names.y = "False Negative Rate";
     }
 
     const datasets = [{
@@ -34,9 +45,9 @@ export function ROCCurvePlot(props) {
             showLine: true,
             lineTension: 0,
             fill: false,
-            data: curve.tpr.map((tpr, index) => ({
-                x: curve.fpr[index],
-                y: tpr
+            data: curve.independent.map((independent, index) => ({
+                x: curve.dependent[index],
+                y: independent
             })),
             pointRadius: 0,
             backgroundColor: color,
@@ -56,13 +67,13 @@ export function ROCCurvePlot(props) {
                     x: {
                         title: {
                             display: true,
-                            text: 'False Positive Rate'
+                            text: axes_names.x
                         }
                     },
                     y: {
                         title: {
                             display: true,
-                            text: 'True Positive Rate'
+                            text: axes_names.y
                         }
                     }
                 },
@@ -70,7 +81,7 @@ export function ROCCurvePlot(props) {
                     display: true,
                     text: props.title
                 },
-                apsectRatio: 1
+                // aspectRatio: 1
             }
             }
         />

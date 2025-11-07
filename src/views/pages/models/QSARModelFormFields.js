@@ -136,7 +136,7 @@ export function QSARValidationStrategies(props) {
     const addValidationStrategy = () => {
         if (values && setFieldValue) {
             const currentValidationStrategies = values.validationStrategies || [];
-            const defaultMetric = metrics && metrics.length > 0 ? [metrics[0].id] : [];
+            const defaultMetric = metrics && metrics.length > 0 ? [metrics[0]] : [];
             const defaultDataSplit = allDataSplits && allDataSplits.length > 0 ? allDataSplits[0] : null;
             setFieldValue('validationStrategies', [
                 ...currentValidationStrategies,
@@ -164,7 +164,7 @@ export function QSARValidationStrategies(props) {
         }
         setLoadingScaffolds(true);
         try {
-            const url = new URL(`data-splits/scaffolds/list/`, props.apiUrls.qsarRoot);
+            const url = new URL(`data-splits/scaffolds/`, props.apiUrls.qsarRoot);
             const response = await fetch(url.toString(), {
                 credentials: "include",
             });
@@ -193,16 +193,14 @@ export function QSARValidationStrategies(props) {
 
         setLoadingDataSplits(true);
         try {
-            const url = new URL(`data-splits/list/`, props.apiUrls.qsarRoot);
+            const url = new URL(`data-splits/`, props.apiUrls.qsarRoot);
             const response = await fetch(url.toString(), {
                 credentials: "include",
             });
             if (!response.ok) {
                 throw new Error(`Failed to fetch data splits: ${response.statusText}`);
             }
-            const no_array = ["BootstrapSplit", "GBMTDataSplit", "ClusterSplit"]
             let data = await response.json();
-            data = data.filter(split => !no_array.includes(split))
             setAllDataSplits(data);
         } catch (error) {
             console.error("Error fetching algorithms:", error);
@@ -216,26 +214,16 @@ export function QSARValidationStrategies(props) {
         if (!props.apiUrls || !props.apiUrls.qsarRoot || fetchedRef.current[dataSplitName]) {
             return;
         }
-
-        const processParameters = (data) => {
-            const params = Object.fromEntries(
-                Object.entries(data).map(
-                    ([key, value]) => [key, value.value]));
-            params["name"] = dataSplitName;
-            return params;
-        }
-
         const setDataSplitParameters = (data) => {
             fetchedRef.current[dataSplitName] = true;
             if (values && setFieldValue) {
                 const currentValidationStrategies = values.validationStrategies || [];
                 const index = currentIndex;
                 if (index !== null && index >= 0 && index < currentValidationStrategies.length) {
-                    const updatedDataSplit = processParameters(data);
                     const updatedValidationStrategies = [...currentValidationStrategies];
                     updatedValidationStrategies[index] = {
                         ...updatedValidationStrategies[index],
-                        dataSplit: updatedDataSplit
+                        dataSplit: {...data, "name": dataSplitName}
                     };
                     setFieldValue('validationStrategies', updatedValidationStrategies);
                 }
@@ -280,9 +268,6 @@ export function QSARValidationStrategies(props) {
     };
 
     const renderParamInput = (paramName, paramValue) => {
-        const currentDataSplitName = values?.validationStrategies?.[currentIndex]?.dataSplit.name;
-        const currentDataSplit = dataSplitsParameters?.[currentDataSplitName];
-        const type = currentDataSplit?.[paramName] ? currentDataSplit[paramName].type : null;
         if (paramName === "name" || paramValue === null || paramValue === undefined) {
             return null;
         } else if (paramName === "scaffold") {
@@ -307,7 +292,7 @@ export function QSARValidationStrategies(props) {
                     </Col>
                 </FormGroup>
             );
-        } else if (type === "int" || type === "float") {
+        } else {
             return (
                 <FormGroup row>
                     <Label htmlFor={`${validationStrategiesPrefix}.${paramName}`} sm={4}>{paramName}</Label>
@@ -360,7 +345,7 @@ export function QSARValidationStrategies(props) {
                                 <option value="" disabled>Loading data splits...</option>
                             ) : (
                                 allDataSplits.map((desc) => (
-                                    <option key={desc} value={desc}>{desc}</option>
+                                    <option key={desc} value={desc}>{desc.split(".").pop()}</option>
                                 ))
                             )}
                         </Field>
@@ -404,8 +389,8 @@ export function QSARValidationStrategies(props) {
                                 <Field name={`${validationStrategiesPrefix}.metrics`} as={Input} type="select" multiple>
                                     {
                                         metrics.map(metric => (
-                                            <option key={metric.id} value={metric.id}>
-                                                {metric.name}
+                                            <option key={metric} value={metric}>
+                                                {metric}
                                             </option>
                                         ))
                                     }

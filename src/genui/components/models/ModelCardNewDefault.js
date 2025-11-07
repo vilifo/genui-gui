@@ -72,8 +72,6 @@ const ModelCardNewDefault = (props) => {
         for (const emb of data.embeddings) {
             embeddingsArguments[emb] = await fetchResource(`embeddings/${emb}/arguments`)
         }
-        const accuracy = props.metrics.find(m => m.name === "Accuracy");
-        const rmse = props.metrics.find(m => m.name === "RMSE");
         const mode = props.chosenAlgorithm.validModes.find(m => m.name === data.task);
 
         for (const alg of data.algorithms) {
@@ -103,9 +101,9 @@ const ModelCardNewDefault = (props) => {
                         validationStrategies:
                             [{
                                 resourcetype: "BasicValidationStrategy",
-                                dataSplit: data.validationStrategy === "RandomSplit" ?
+                                dataSplit: data.validationStrategy === "qsprpred.data.sampling.splits.RandomSplit" ?
                                     {
-                                        "name": "RandomSplit",
+                                        "name": "qsprpred.data.sampling.splits.RandomSplit",
                                         "testFraction": 0.2,
                                         "seed": 42,
                                     } :
@@ -115,7 +113,7 @@ const ModelCardNewDefault = (props) => {
                                         "testFraction": 0.2
                                     },
                                 cvFolds: 3,
-                                metrics: [mode.name === "classification" ? accuracy.id : rmse.id]
+                                metrics: [mode.name === "classification" ? "accuracy" : "neg_root_mean_squared_error"]
                             }
                             ],
                         hyperParamOptStrategies:
@@ -162,12 +160,11 @@ const ModelCardNewDefault = (props) => {
                         embeddings: ["MorganFP"],
                         task: "classification",
                         algorithms: ["RandomForestClassifier"],
-                        validationStrategy: "RandomSplit"
+                        validationStrategy: "qsprpred.data.sampling.splits.RandomSplit"
                     }}
                     onSubmit={values => {
                         setFormIsSubmitting(true);
                         newModelFromFormData(values)
-                        // TODO: Add scaffolds...
                         setFormIsSubmitting(false);
                     }}
                 >

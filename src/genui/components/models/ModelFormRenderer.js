@@ -14,48 +14,12 @@ const ModelFormRenderer = (props) => {
         array: Yup.array().of(Yup.mixed().nullable()).required(),
     }), []);
 
-
-    // const printYupSchema = (schema, indent = 0, path = '') => {
-    //     if (!schema) return;
-    //     const spacing = '  '.repeat(indent);
-    //     const type = schema.constructor.name.replace('Schema', '').toLowerCase();
-    //
-    //     if (path) {
-    //         console.log(`${spacing}${path}: ${type}`);
-    //     }
-    //
-    //     if (schema instanceof ObjectSchema) {
-    //         const fields = schema.fields;
-    //         for (const key in fields) {
-    //             if (fields.hasOwnProperty(key)) {
-    //                 printYupSchema(fields[key], indent + 1, key);
-    //             }
-    //         }
-    //     } else if (schema instanceof ArraySchema) {
-    //         const innerType = schema.innerType;
-    //         if (innerType) {
-    //             printYupSchema(innerType, indent + 1, '[ ]');
-    //         }
-    //     }
-    // };
-
     const chosenAlgorithm = props.chosenAlgorithm;
     const parameters = !props.omitAlgParams ? props.chosenAlgorithm.parameters : null;
     const enableFileUploads = props.enableFileUploads;
     const disabledModelFormFields = React.useMemo(() => (props.disabledModelFormFields ? props.disabledModelFormFields : []), [props]);
-
-    const initMetrics = (metrics_array) => {
-        const ret = [];
-        metrics_array.forEach(metric => {
-            if (metric.validAlgorithms.length === 0 || metric.validAlgorithms.find(alg => chosenAlgorithm.id === alg)) {
-                ret.push(metric);
-            }
-        });
-        return ret;
-    };
-
-    const [metrics, setMetrics] = React.useState(!props.omitValidation && props.metrics ? initMetrics(props.metrics) : null)
     const [modes, setModes] = React.useState(chosenAlgorithm.validModes);
+    const [metrics, setMetrics] = React.useState(props.metrics[modes[0].name]);
     const [initialValues, setInitialValues] = React.useState(null);
     const [schema, setSchema] = React.useState(null);
     const [formDataReady, setFormDataReady] = React.useState(false);
@@ -68,7 +32,7 @@ const ModelFormRenderer = (props) => {
         const trainingStrategyInit = Object.assign(trainingStrategyDefaultInit, props.trainingStrategyInit ? props.trainingStrategyInit : {});
 
         const validationStrategiesDefaultInit = metrics && !disabledModelFormFields.includes('validationStrategy.metrics') ?
-            [{metrics: metrics.length > 0 ? [metrics[0].id] : [], cvFolds: 3}] : [];
+            [{metrics: metrics.length > 0 ? [metrics[0]] : [], cvFolds: 3}] : [];
 
         const validationStrategiesInit = props.validationStrategiesInit ? props.validationStrategiesInit : validationStrategiesDefaultInit;
 
@@ -113,8 +77,7 @@ const ModelFormRenderer = (props) => {
     const generateSchema = React.useCallback(() => {
         const trainingStrategyDefault = {
             algorithm: Yup.number().integer().positive("Algorithm ID needs to be a positive number").required('Algorithm ID must be supplied'),
-            mode: Yup.number().integer()
-                .max(256, 'Mode must be 256 characters or less.').required('You must specify a mode.'),
+            mode: Yup.number().transform(v => (v === '' || v == null ? undefined : Number(v))).integer().required('You must specify a mode.'),
         };
 
         if (parameters) {
@@ -177,20 +140,11 @@ const ModelFormRenderer = (props) => {
         if (modes.length === 1) {
             initFormData();
         }
-    }, [modes.length, initFormData])
+    }, [modes, initFormData])
 
     const handleModeSelect = (mode) => {
-        if (metrics) {
-            const metrics_array = [];
-            metrics.forEach(metric => {
-                if (metric.validModes.find(item => mode.id === item.id)) {
-                    metrics_array.push(metric);
-                }
-            });
-            setMetrics(metrics_array);
-        }
+        setMetrics(props.metrics[mode.name]);
         setModes([mode]);
-        initFormData();
     };
 
     if (!formDataReady) {
