@@ -196,11 +196,19 @@ export default function QSARModelCreateCard(props) {
                     const updatedValidationStrategies = [];
                     data.validationStrategies.forEach((vs) => {
                         vs["resourcetype"] = "BasicValidationStrategy";
-                        if (vs.dataSplit.name === "ScaffoldSplit") {
-                            vs.dataSplit = {
+                        if (vs.dataSplit.name === "qsprpred.data.sampling.splits.ScaffoldSplit") {
+                            vs["dataSplit"] = {
                                 ...vs.dataSplit,
-                                scaffold: {name: vs.dataSplit.scaffold}
+                                scaffold: {name: `qsprpred.data.chem.scaffolds.${vs.dataSplit.scaffold}`}
                             };
+                            delete vs["dataSplit"]["split_kwargs"]
+                        }
+                        if (vs.dataSplit.name === "qsprpred.data.sampling.splits.ClusterSplit") {
+                            vs["dataSplit"] = {
+                                ...vs.dataSplit,
+                                clustering: {name: `qsprpred.data.chem.clustering.${vs.dataSplit.clustering}`}
+                            };
+                            delete vs["dataSplit"]["split_kwargs"]
                         }
                         updatedValidationStrategies.push(vs);
                     });
@@ -215,12 +223,16 @@ export default function QSARModelCreateCard(props) {
                                 if (Array.isArray(value)) {
                                     newSearchSpace.push({name: key, type: "sequence", value: value});
                                 } else if (typeof value === "object") {
-                                    newSearchSpace.push({name:key, type:"sequence",
-                                        value:floatRange(value.min, value.max, value.step)});
+                                    newSearchSpace.push({
+                                        name: key, type: "sequence",
+                                        value: floatRange(value.min, value.max, value.step)
+                                    });
                                 } else if (typeof value === "string") {
-                                    newSearchSpace.push({name:key, type:"sequence",
-                                        value:value.split(';').map(v =>
-                                            Number.parseFloat(v.trim())).filter(v => !isNaN(v))});
+                                    newSearchSpace.push({
+                                        name: key, type: "sequence",
+                                        value: value.split(';').map(v =>
+                                            Number.parseFloat(v.trim())).filter(v => !isNaN(v))
+                                    });
                                 } else {
                                     return [key, value];
                                 }
@@ -250,7 +262,7 @@ export default function QSARModelCreateCard(props) {
                         delete data.searchSpace;
                     }
                 }
-                console.log(data);
+                // console.log(data);
                 return data;
             }}
         />

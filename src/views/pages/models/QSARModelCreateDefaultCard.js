@@ -11,7 +11,7 @@ function EndpointSelector(props) {
                                     message="Choose the desired activity endpoint by clicking the corresponding row in the table below. The chosen activity type from the given activity set will be used as the output variable for the resulting model."/>
 }
 
-export default function QSARModelCreateCard(props) {
+export default function QSARModelCreateDefaultCard(props) {
     let molsets = [];
     Object.keys(props.compoundSets).forEach(
         (key) => molsets = molsets.concat(props.compoundSets[key])

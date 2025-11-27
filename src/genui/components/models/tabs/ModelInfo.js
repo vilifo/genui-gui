@@ -107,7 +107,7 @@ function ModelInfo({
     const validationParams = (validationStrategies ? validationStrategies.map((validationStrategy) => [
         {
             name: "Data Split",
-            value: `${validationStrategy.dataSplit}`
+            value: validationStrategy.dataSplit
         },
         {
             name: "Cross Validation Folds",
@@ -177,6 +177,22 @@ function ModelInfo({
                                     items={validationParams}
                                     dataProps={["value"]}
                                     rowHeaderProp="name"
+                                    conversion={(item) => {
+                                        if (typeof item === "object" && item !== null) {
+                                            const formatNestedObject = (obj) => {
+                                                return Object.entries(obj)
+                                                    .map(([key, value]) => {
+                                                        if (typeof value === 'object' && value !== null) {
+                                                            return `${key}: {${formatNestedObject(value)}}`;
+                                                        }
+                                                        return `${key}: ${value}`;
+                                                    })
+                                                    .join('; ');
+                                            };
+                                            return formatNestedObject(item);
+                                        }
+                                        return item.toString();
+                                    }}
                                 />
                             </Table>
                         </React.Fragment>

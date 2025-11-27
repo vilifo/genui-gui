@@ -177,7 +177,7 @@ function IndependentTestSetOverview(props) {
                             <TableDataFromItems
                                 items={validSetPerf}
                                 dataProps={['value']}
-                                conversion={(item) => typeof item === 'number' ? item.toPrecision(4) : item.toString()}
+                                conversion={(item) => typeof item === 'number' ? item.toPrecision(4) : `${item}`}
                                 rowHeaderProp="metric"
                                 parseRowHeader={header => header.includes("curve") ? (header + " (AUC)") : header}
                             />

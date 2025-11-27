@@ -84,7 +84,7 @@ const ModelCardNewDefault = (props) => {
                         algorithm: props.chosenAlgorithm.id,
                         parameters: {
                             alg: alg,
-                            parameters: {}
+                            parameters: "{}"
                         },
                         mode: mode.id,
                         embeddings:
@@ -104,13 +104,13 @@ const ModelCardNewDefault = (props) => {
                                 dataSplit: data.validationStrategy === "qsprpred.data.sampling.splits.RandomSplit" ?
                                     {
                                         "name": "qsprpred.data.sampling.splits.RandomSplit",
-                                        "testFraction": 0.2,
+                                        "test_fraction": 0.2,
                                         "seed": 42,
                                     } :
                                     {
-                                        "name": "ScaffoldSplit",
-                                        "scaffold": {"name": "BemisMurckoRDKit"},
-                                        "testFraction": 0.2
+                                        "name": "qsprpred.data.sampling.splits.ScaffoldSplit",
+                                        "scaffold": {"name": "qsprpred.data.chem.scaffolds.BemisMurckoRDKit"},
+                                        "test_fraction": 0.2
                                     },
                                 cvFolds: 3,
                                 metrics: [mode.name === "classification" ? "accuracy" : "neg_root_mean_squared_error"]

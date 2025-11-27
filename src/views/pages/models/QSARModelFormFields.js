@@ -12,6 +12,7 @@ import {
 const dataSplitsCacheKey = 'qsarDataSplitsCache';
 const dataSplitsParametersCacheKey = 'qsarDataSplitParametersCache';
 const scaffoldsCacheKey = 'qsarScaffoldsCache';
+const clusteringCacheKey = 'qsarClusteringCache';
 
 export function PredictionsFields(props) {
     return (
@@ -130,6 +131,8 @@ export function QSARValidationStrategies(props) {
     const [dataSplitsParameters, setDataSplitsParameters] = useLocalStorageWithExpiry(dataSplitsParametersCacheKey, {});
     const [loadingScaffolds, setLoadingScaffolds] = React.useState(false);
     const [scaffolds, setScaffolds] = useLocalStorageWithExpiry(scaffoldsCacheKey, []);
+    const [loadingClustering, setLoadingClustering] = React.useState(false);
+    const [clustering, setClustering] = useLocalStorageWithExpiry(clusteringCacheKey, []);
     const {values, setFieldValue} = props.formikProps || {};
     const metrics = props.metrics;
 
@@ -153,18 +156,18 @@ export function QSARValidationStrategies(props) {
         }
     };
 
-    const fetchScaffolds = React.useCallback(async () => {
+    const fetchData = React.useCallback(async (type, setData, data, setLoading) => {
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
             console.error("API URLs not provided");
             return;
         }
 
-        if (scaffolds.length > 0) {
+        if (data.length > 0) {
             return;
         }
-        setLoadingScaffolds(true);
+        setLoading(true);
         try {
-            const url = new URL(`data-splits/scaffolds/`, props.apiUrls.qsarRoot);
+            const url = new URL(`data-splits/${type}/`, props.apiUrls.qsarRoot);
             const response = await fetch(url.toString(), {
                 credentials: "include",
             });
@@ -172,14 +175,22 @@ export function QSARValidationStrategies(props) {
                 throw new Error(`Failed to fetch data splits: ${response.statusText}`);
             }
 
-            const data = await response.json();
-            setScaffolds(data);
+            const responseData = await response.json();
+            setData(responseData);
         } catch (error) {
             console.error("Error fetching scaffolds:", error);
         } finally {
-            setLoadingScaffolds(false);
+            setLoading(false);
         }
-    }, [props.apiUrls, scaffolds, setScaffolds]);
+    }, [props.apiUrls]);
+
+    const fetchScaffolds = React.useCallback(async () => {
+        fetchData('scaffolds', setScaffolds, scaffolds, setLoadingScaffolds);
+    }, [scaffolds, setScaffolds, fetchData]);
+
+    const fetchClustering = React.useCallback(async () => {
+        fetchData('clustering', setClustering, clustering, setLoadingClustering);
+    }, [clustering, setClustering, fetchData]);
 
     const fetchDataSplits = React.useCallback(async () => {
         if (!props.apiUrls || !props.apiUrls.qsarRoot) {
@@ -221,9 +232,17 @@ export function QSARValidationStrategies(props) {
                 const index = currentIndex;
                 if (index !== null && index >= 0 && index < currentValidationStrategies.length) {
                     const updatedValidationStrategies = [...currentValidationStrategies];
+                    let nextDataSplit = { ...data, name: dataSplitName };
+                    if ( dataSplitName === "qsprpred.data.sampling.splits.ClusterSplit" &&
+                        nextDataSplit.clustering === "None") {
+                        if (Array.isArray(clustering) && clustering.length > 0) {
+                            nextDataSplit = { ...nextDataSplit, clustering: clustering[0] };
+                        }
+                    }
+
                     updatedValidationStrategies[index] = {
                         ...updatedValidationStrategies[index],
-                        dataSplit: {...data, "name": dataSplitName}
+                        dataSplit: nextDataSplit,
                     };
                     setFieldValue('validationStrategies', updatedValidationStrategies);
                 }
@@ -256,7 +275,7 @@ export function QSARValidationStrategies(props) {
         } finally {
             setLoading(false);
         }
-    }, [props.apiUrls, values, setFieldValue, currentIndex, dataSplitsParameters, setDataSplitsParameters]);
+    }, [props.apiUrls, values, setFieldValue, currentIndex, dataSplitsParameters, setDataSplitsParameters, clustering]);
 
     const handleDataSplitChange = (event) => {
         const selectedDataSplitId = event.target.value;
@@ -267,31 +286,37 @@ export function QSARValidationStrategies(props) {
         fetchDataSplitParameters(selectedDataSplitId);
     };
 
+    const specialParamFormGroup = (name, loadingState, options) =>{
+        return (
+            <FormGroup row>
+                <Label htmlFor={`${validationStrategiesPrefix}.${name}`} sm={4}>{name}</Label>
+                <Col sm={8}>
+                    <Field
+                        name={`${validationStrategiesPrefix}.dataSplit.${name}`}
+                        as={Input} type="select"
+                        disabled={loadingState}
+                    >
+                        {loadingState ? (
+                            <option value="" disabled>Loading {name}...</option>
+                        ) : (
+                            options.map((o) => (
+                                <option key={o} value={o}>{o}</option>
+                            ))
+                        )}
+                    </Field>
+                    <FieldErrorMessage name={`${validationStrategiesPrefix}.dataSplit.${name}`}/>
+                </Col>
+            </FormGroup>
+        );
+    }
+
     const renderParamInput = (paramName, paramValue) => {
         if (paramName === "name" || paramValue === null || paramValue === undefined) {
             return null;
         } else if (paramName === "scaffold") {
-            return (
-                <FormGroup row>
-                    <Label htmlFor={`${validationStrategiesPrefix}.scaffold`} sm={4}>Scaffold</Label>
-                    <Col sm={8}>
-                        <Field
-                            name={`${validationStrategiesPrefix}.dataSplit.scaffold`}
-                            as={Input} type="select"
-                            disabled={loadingScaffolds}
-                        >
-                            {loadingScaffolds ? (
-                                <option value="" disabled>Loading scaffolds...</option>
-                            ) : (
-                                scaffolds.map((s) => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))
-                            )}
-                        </Field>
-                        <FieldErrorMessage name={`${validationStrategiesPrefix}.dataSplit.scaffold`}/>
-                    </Col>
-                </FormGroup>
-            );
+            return specialParamFormGroup(paramName, loadingScaffolds, scaffolds);
+        } else if (paramName === "clustering") {
+            return specialParamFormGroup(paramName, loadingClustering, clustering);
         } else {
             return (
                 <FormGroup row>
@@ -320,6 +345,10 @@ export function QSARValidationStrategies(props) {
     React.useEffect(() => {
         fetchScaffolds()
     }, [fetchScaffolds])
+
+    React.useEffect(() => {
+        fetchClustering()
+    }, [fetchClustering])
 
     React.useEffect(() => {
         if (currentDataSplitId) {
