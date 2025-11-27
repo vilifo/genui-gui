@@ -180,6 +180,7 @@ export default function QSARModelCreateCard(props) {
                         values.predictionsType = "Active Probability"
                     }
                 }
+                values.trainingStrategy.parameters.parameters = {};
                 return values;
             }}
             prePost={(data) => {

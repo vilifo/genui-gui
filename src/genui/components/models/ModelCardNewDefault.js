@@ -84,7 +84,7 @@ const ModelCardNewDefault = (props) => {
                         algorithm: props.chosenAlgorithm.id,
                         parameters: {
                             alg: alg,
-                            parameters: "{}"
+                            parameters: {}
                         },
                         mode: mode.id,
                         embeddings:

@@ -12,7 +12,7 @@ const SearchSpace = (props) => {
     const searchSpace = values.hyperParamOptStrategy.searchSpace;
     const [internalParameters,] = useLocalStorageWithExpiry(algorithmsParametersKey, {});
     const possibleParameters = internalParameters[values.trainingStrategy.parameters.alg];
-    const remainingParameters = Object.entries(possibleParameters || {}).filter(([key, value]) => !(key in searchSpace)).map(([key, value]) => key);
+    const remainingParameters = Object.entries(possibleParameters || {}).filter(([key, _]) => !(key in searchSpace)).map(([key, _]) => key);
     const searchSpacePrefix = props.searchSpacePrefix;
     const [inputType, setInputType] = React.useState({});
 

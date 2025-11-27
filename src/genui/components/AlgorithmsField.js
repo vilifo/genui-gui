@@ -1,69 +1,42 @@
 import React from 'react';
-import {Col, FormGroup, Input, Label} from 'reactstrap';
+import {Col, FormGroup, Input, Label, Row, Button} from 'reactstrap';
 import {Field} from 'formik';
 import {FieldErrorMessage, useLocalStorageWithExpiry} from "../../genui";
 
 export const algorithmsListKey = 'algorithmsCache_list';
 export const algorithmsParametersKey = 'algorithmsCache_parameters';
 
-export function AlgorithmsField(props) {
-    const algorithmPrefix = "trainingStrategy.parameters";
-    const currentMode = props.modes[0].name || null;
-    const [loading, setLoading] = React.useState(false);
-    const [allAlgorithms, setAllAlgorithms] = useLocalStorageWithExpiry(algorithmsListKey,
-        Object.fromEntries(props.chosenAlgorithm.validModes.map(mode => [mode.name, []])));
-    const [internalParameters, setInternalParameters] = useLocalStorageWithExpiry(algorithmsParametersKey, {});
-    const [loadingAlgorithms, setLoadingAlgorithms] = React.useState(false);
-    const {values, setFieldValue} = props.formikProps || {};
-    const fetchResource = props.fetchResource;
 
-    const fetchAlgorithms = React.useCallback(
-        async () => {
-            setLoadingAlgorithms(true);
-            const data = await fetchResource(`models/qsprpred/sklearn/mode/${currentMode}/`);
-            if (data) {
-                setAllAlgorithms({...allAlgorithms, [currentMode]: data});
-            }
-            setLoadingAlgorithms(false);
-        },
-        [fetchResource, allAlgorithms, setAllAlgorithms, currentMode]
+export function ParametersField(props) {
+    const {values, setFieldValue} = props.formikProps || {};
+    const algorithmPrefix = "trainingStrategy.parameters";
+    const availableParameters = props.availableParameters || {};
+    const currentParameters = typeof values.trainingStrategy.parameters.parameters === "string" ?
+        {} : values.trainingStrategy.parameters.parameters;
+    const remainingParameters = Object.entries(availableParameters).filter(([key, _]) =>
+        !(key in currentParameters)).map(([key, _]) => key);
+
+    const handleRemoveItem = (paramName) => {
+        const updatedParameters = {...currentParameters};
+        delete updatedParameters[paramName];
+        setFieldValue(`${algorithmPrefix}.parameters`, updatedParameters);
+    }
+
+    const DeleteButton = ({paramName, handleRemoveItem}) => (
+        <Col sm={1} className="align-content-center">
+            <Button
+                type="button"
+                onClick={() => handleRemoveItem(paramName)}
+                className="text-red-600 hover:text-red-800 text-lg font-bold px-2 py-1 rounded transition"
+                title="Delete"
+            >
+                ✖
+            </Button>
+        </Col>
     );
 
-    const fetchAlgorithmParameters = React.useCallback(async (alg_name) => {
-        setLoading(true);
-        let params;
-        if (!internalParameters[alg_name]) {
-            const data = await fetchResource(`models/qsprpred/sklearn/${alg_name}/params`)
-            if (!data) {
-                setLoading(false);
-                return;
-            }
-            setInternalParameters({...internalParameters, [alg_name]: data});
-            params = Object.fromEntries(
-                Object.entries(data).map(([key, value]) => [key, value.value]));
-        } else{
-            params = Object.fromEntries(
-                Object.entries(internalParameters[alg_name]).map(([key, value]) => [key, value.value]));
-        }
-        const newParameters = {alg: alg_name, parameters: params};
-        setFieldValue(algorithmPrefix, newParameters);
-        setLoading(false);
-    }, [fetchResource, setInternalParameters, internalParameters, setFieldValue]);
-
-    const handleAlgorithmChange = (event) => {
-        const selectedAlgorithmId = event.target.value;
-        if (selectedAlgorithmId === values.trainingStrategy.parameters.alg) return;
-        setFieldValue(`${algorithmPrefix}`, {
-            alg: selectedAlgorithmId,
-            parameters: {}
-        });
-        setFieldValue(`hyperParamOptStrategy`, {"resourcetype": "None"});
-    };
-
     const renderParamInput = (paramName, paramValue) => {
-        const selectedAlgorithm = values.trainingStrategy.parameters.alg;
-        const currentParameters = internalParameters[selectedAlgorithm] ? internalParameters[selectedAlgorithm] : {};
-        const constraint = currentParameters && currentParameters[paramName] ? currentParameters[paramName].constraint : [];
+        const constraint = availableParameters[paramName] ? availableParameters[paramName].constraint : [];
         const type = constraint ? constraint.type : null;
 
         const validateInterval = (x) => {
@@ -92,7 +65,7 @@ export function AlgorithmsField(props) {
             return null;
         } else if (type === "int" || type === "float") {
             return (
-                <div>
+                <Row>
                     <Label>{paramName}</Label>
                     <Col sm={8}>
                         <Field
@@ -105,79 +78,198 @@ export function AlgorithmsField(props) {
                         />
                         <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
                     </Col>
-                </div>
+                    <DeleteButton paramName={paramName} handleRemoveItem={handleRemoveItem}/>
+                </Row>
             );
         } else if (type === "bool") {
             return (
-                <div key={paramName} className="form-check" style={{margin: '5px'}}>
-                    <Field>
-                        {({field}) => (
-                            <input
-                                {...field}
-                                type="checkbox"
-                                className="form-check-input"
-                                id={`${algorithmPrefix}-parameters-${paramName}`}
-                                checked={field.value || false}
-                            />
-                        )}
-                    </Field>
-                    <label className="form-check-label" htmlFor={`${algorithmPrefix}-parameters-${paramName}`}>
-                        {paramName}
-                    </label>
-                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
-                </div>
+                <Row>
+                    <Col>
+                        <div key={paramName} className="form-check" style={{margin: '5px'}}>
+                            <Field name={`${algorithmPrefix}.parameters.${paramName}`}>
+                                {({field}) => (
+                                    <input
+                                        {...field}
+                                        type="checkbox"
+                                        className="form-check-input"
+                                        id={`${algorithmPrefix}-parameters-${paramName}`}
+                                        checked={field.value || false}
+                                    />
+                                )}
+                            </Field>
+                            <label className="form-check-label" htmlFor={`${algorithmPrefix}-parameters-${paramName}`}>
+                                {paramName}
+                            </label>
+                            <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
+                        </div>
+                    </Col>
+                    <DeleteButton paramName={paramName} handleRemoveItem={handleRemoveItem}/>
+                </Row>
             );
         } else if (type === "str") {
             const choices = constraint.choices || [""];
             return (
-                <div>
+                <Row>
                     <Label>{paramName}</Label>
-                    <Field
-                        name={`${algorithmPrefix}.parameters.${paramName}`}
-                        as={Input}
-                        type="select"
-                        value={paramValue || choices[0]}
-                        onChange={(e) => setFieldValue(`${algorithmPrefix}.parameters.${paramName}`, e.target.value)}
-                    >
-                        {choices.map((choice) => (
-                            <option key={`${algorithmPrefix}-parameters-${paramName}-${choice}`} value={choice}>
-                                {choice}
-                            </option>
-                        ))}
-                    </Field>
-                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
-                </div>
-            );
-        } else if (Number.parseInt(paramValue) || Number.parseFloat(paramValue)) {
-            return (
-                <div>
-                    <Label>{paramName}</Label>
-                    <Col sm={8}>
+                    <Col>
                         <Field
                             name={`${algorithmPrefix}.parameters.${paramName}`}
                             as={Input}
-                            type="number"
-                        />
+                            type="select"
+                            value={paramValue || choices[0]}
+                            onChange={(e) => setFieldValue(`${algorithmPrefix}.parameters.${paramName}`, e.target.value)}
+                        >
+                            {choices.map((choice) => (
+                                <option key={`${algorithmPrefix}-parameters-${paramName}-${choice}`} value={choice}>
+                                    {choice}
+                                </option>
+                            ))}
+                        </Field>
                         <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
                     </Col>
-                </div>
+                    <DeleteButton paramName={paramName} handleRemoveItem={handleRemoveItem}/>
+                </Row>
+            );
+        } else if (Number.parseInt(paramValue) || Number.parseFloat(paramValue)) {
+            return (
+                <Row>
+                    <Label>{paramName}</Label>
+                    <Col>
+                        <Col sm={8}>
+                            <Field
+                                name={`${algorithmPrefix}.parameters.${paramName}`}
+                                as={Input}
+                                type="number"
+                            />
+                            <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
+                        </Col>
+                    </Col>
+                    <DeleteButton paramName={paramName} handleRemoveItem={handleRemoveItem}/>
+                </Row>
             );
         } else {
             return (
-                <div>
+                <Row>
                     <Label>{paramName}</Label>
-                    <Field
-                        name={`${algorithmPrefix}.parameters.${paramName}`}
-                        as={Input}
-                        type="string"
-                        value={paramValue || ""}
-                        onChange={(e) => setFieldValue(`${algorithmPrefix}.parameters.${paramName}`, e.target.value)}
-                    >
-                    </Field>
-                    <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
-                </div>
+                    <Col>
+                        <Field
+                            name={`${algorithmPrefix}.parameters.${paramName}`}
+                            as={Input}
+                            type="string"
+                            value={paramValue || ""}
+                            onChange={(e) => setFieldValue(`${algorithmPrefix}.parameters.${paramName}`, e.target.value)}
+                        >
+                        </Field>
+                        <FieldErrorMessage name={`${algorithmPrefix}.parameters.${paramName}`}/>
+                    </Col>
+                    <DeleteButton paramName={paramName} handleRemoveItem={handleRemoveItem}/>
+                </Row>
             );
         }
+    };
+
+    const handleAddItem = (item) => {
+        const newParameters = {...currentParameters, [item]: availableParameters[item].value};
+        setFieldValue(`${algorithmPrefix}.parameters`, newParameters);
+    }
+
+    return (
+        <React.Fragment>
+            <FormGroup>
+                <Row>
+                    <Col sm={6}>
+                        <label>Available Items</label>
+                        <div className="p-4 rounded border" style={{height: '400px', overflowY: 'auto'}}>
+                            {remainingParameters.map((item) => (
+                                <div key={item} className="mb-3">
+                                    <Row className="align-items-center">
+                                        <Col sm={1} className="text-left">
+                                            <Button
+                                                onClick={() => handleAddItem(item)}
+                                                className="text-green-600 hover:text-green-800 text-lg font-bold px-2 py-1 rounded transition"
+                                                title="Add"
+                                            >
+                                                ➕
+                                            </Button>
+                                        </Col>
+                                        <Col sm={10} className="text-left">
+                                            <Label className="ml-2"
+                                                   htmlFor={`${algorithmPrefix}.parameters.${item}`}>{item}</Label>
+                                        </Col>
+                                    </Row>
+                                </div>
+                            ))}
+                        </div>
+                    </Col>
+
+                    <Col sm={6}>
+                        <label>Selected Items</label>
+                        <div className="p-4 rounded border" style={{
+                            height: '400px',
+                            overflowY: 'auto',
+                            gap: '4px',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}>
+                            {Object.entries(currentParameters).map(([key, value]) => (
+                                <React.Fragment key={key}>
+                                    {renderParamInput(key, value)}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </Col>
+                </Row>
+            </FormGroup>
+        </React.Fragment>
+
+    );
+}
+
+
+export function AlgorithmsField(props) {
+    const algorithmPrefix = "trainingStrategy.parameters";
+    const currentMode = props.modes[0].name || null;
+    const [loading, setLoading] = React.useState(false);
+    const [allAlgorithms, setAllAlgorithms] = useLocalStorageWithExpiry(algorithmsListKey,
+        Object.fromEntries(props.chosenAlgorithm.validModes.map(mode => [mode.name, []])));
+    const [internalParameters, setInternalParameters] = useLocalStorageWithExpiry(algorithmsParametersKey, {});
+    const [loadingAlgorithms, setLoadingAlgorithms] = React.useState(false);
+    const {values, setFieldValue} = props.formikProps || {};
+    const fetchResource = props.fetchResource;
+
+    const fetchAlgorithms = React.useCallback(
+        async () => {
+            setLoadingAlgorithms(true);
+            const data = await fetchResource(`models/qsprpred/sklearn/mode/${currentMode}/`);
+            if (data) {
+                setAllAlgorithms({...allAlgorithms, [currentMode]: data});
+            }
+            setLoadingAlgorithms(false);
+        },
+        [fetchResource, allAlgorithms, setAllAlgorithms, currentMode]
+    );
+
+    const fetchAlgorithmParameters = React.useCallback(async (alg_name) => {
+        setLoading(true);
+        if (!internalParameters[alg_name]) {
+            const data = await fetchResource(`models/qsprpred/sklearn/${alg_name}/params`)
+            if (!data) {
+                setLoading(false);
+                return;
+            }
+            setInternalParameters({...internalParameters, [alg_name]: data});
+        }
+        setLoading(false);
+    }, [fetchResource, setInternalParameters, internalParameters]);
+
+    const handleAlgorithmChange = (event) => {
+        const selectedAlgorithmId = event.target.value;
+        if (selectedAlgorithmId === values.trainingStrategy.parameters.alg) return;
+        setFieldValue(`${algorithmPrefix}`, {
+            alg: selectedAlgorithmId,
+            parameters: {}
+        });
+        setFieldValue(`hyperParamOptStrategy`, {"resourcetype": "None"});
     };
 
     React.useEffect(() => {
@@ -220,12 +312,10 @@ export function AlgorithmsField(props) {
                 <div className="mt-3">
                     <h5>Parameters</h5>
                     <div className="mb-3 border p-3 rounded">
-                        {values && values.trainingStrategy && values.trainingStrategy.parameters &&
-                            Object.entries(values.trainingStrategy.parameters.parameters).map(([paramName, paramValue]) => (
-                                <div key={paramName} className="mb-3">
-                                    {renderParamInput(paramName, paramValue)}
-                                </div>
-                            ))}
+                        <ParametersField
+                            formikProps={props.formikProps}
+                            availableParameters={internalParameters[values.trainingStrategy.parameters.alg]}
+                        />
                     </div>
                 </div>
             ) : (
