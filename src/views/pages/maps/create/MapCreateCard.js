@@ -1,5 +1,5 @@
 import React from 'react';
-import {ModelCardNew, convertEmbeddingsArgumentsObjectsToArrays} from '../../../../genui';
+import {ModelCardNew, convertEmbeddingsArgumentsObjectsToArrays, useFetchResource} from '../../../../genui';
 import * as Yup from 'yup';
 import {MapExtraFields, MapTrainFields} from './MapFormFields';
 
@@ -8,6 +8,7 @@ export default function MapCreateCard(props) {
     Object.keys(props.compoundSets).forEach(
         (key) => molsets = molsets.concat(props.compoundSets[key])
     );
+    const fetchResource = useFetchResource(props.apiUrls.qsarRoot);
 
     const trainingStrategyInit = {
         embeddings: [{name: "MorganFP", arguments: {}}],
@@ -39,5 +40,6 @@ export default function MapCreateCard(props) {
             trainingStrategyFields={MapTrainFields}
             extraFields={MapExtraFields}
             prePost={convertEmbeddingsArgumentsObjectsToArrays}
+            fetchResource={fetchResource}
         />)
 }

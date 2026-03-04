@@ -1,39 +1,14 @@
 import React from 'react';
 import { ComponentWithObjects, ComponentWithResources, ModelsPage } from '../../../../genui';
-// import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from 'reactstrap';
 import MapCreateCard from './MapCreateCard';
 import MapCard from './MapCard';
 
-// function HeaderNav(props) {
-//   return (<UncontrolledDropdown nav inNavbar>
-//     <DropdownToggle nav>Create New...</DropdownToggle>
-//     <DropdownMenu>
-//       {
-//         props.addChoices.map(choice =>
-//             (<DropdownItem
-//                 key={choice.id}
-//                 onClick={() => {props.onModelAdd(
-//                     choice
-//                     , MapCreateCard
-//                     , {
-//                       h : {"md" : 13, "sm" : 13},
-//                       w : {"md" : 1, "sm" : 1},
-//                       minH : {"md" : 3, "sm" : 3},
-//                     }
-//                 )}}
-//             >
-//               {choice.name}
-//             </DropdownItem>)
-//         )
-//       }
-//     </DropdownMenu>
-//   </UncontrolledDropdown>)
-// }
 
 const MapDisplay = (props) => {
   const resources = {
     algorithmChoices : new URL('algorithms/', props.apiUrls.mapsRoot),
     embeddings: new URL('embeddings/', props.apiUrls.mapsRoot),
+    metrics: new URL('metrics/', props.apiUrls.qsarRoot),
   };
   const definitions = {
     Map: {

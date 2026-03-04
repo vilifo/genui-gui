@@ -10,6 +10,7 @@ import {Field, Formik, Form} from "formik";
 import useLocalStorageWithExpiry from "../LocalStorageWithExpiry";
 import {embeddingsListKey} from "../EmbeddingField"
 import {algorithmsListKey} from "../AlgorithmsField"
+import {useFetchResource} from "../../utils";
 
 const ModelCardNewDefault = (props) => {
     const [allEmbeddings, setAllEmbeddings] = useLocalStorageWithExpiry(embeddingsListKey, [])
@@ -17,28 +18,7 @@ const ModelCardNewDefault = (props) => {
         Object.fromEntries(props.chosenAlgorithm.validModes.map(mode => [mode.name, []])));
     const [formIsSubmitting, setFormIsSubmitting] = React.useState(false);
     const validationStrategies = {"Random": "RandomSplit", "Scaffold": "ScaffoldSplit"};
-    const fetchingList = React.useState([]);
-
-    const fetchResource = React.useCallback(async (resourceURL) => {
-        if (!resourceURL || fetchingList.includes(resourceURL)) {
-            return null;
-        }
-        fetchingList.push(resourceURL);
-        try {
-            const url = new URL(resourceURL, props.apiUrls.qsarRoot);
-            const response = await fetch(url.toString(), {
-                credentials: "include",
-            });
-            if (!response.ok) {
-                console.error(`Error fetching resource: ${response.status} ${response.statusText}`);
-                return null;
-            }
-            return await response.json();
-        } catch (error) {
-            console.error("Error fetching resource:", error);
-            return null;
-        }
-    }, [props.apiUrls, fetchingList]);
+    const fetchResource = useFetchResource(props.apiUrls.qsarRoot)
 
     const fetchEmbeddings = React.useCallback(async () => {
         if (allEmbeddings.length > 0) {

@@ -33,7 +33,8 @@ import {
     smoothScrollToTop,
     IDsToResources,
     groupBy,
-    scrollTo
+    scrollTo,
+    useFetchResource
 } from './utils'
 import {MoleculeImage, MoleculePic} from './components/compounds/details/MoleculeImage'
 import {MoleculeMetadata, DataPair} from './components/compounds/details/MoleculeMetadata';
@@ -133,6 +134,7 @@ export {
     ActivitySetStatsTable,
     MolsetActivitiesSummary,
     scrollTo,
+    useFetchResource,
     TableFromItems,
     GenericInfo,
     EditMolSet,

@@ -1,3 +1,4 @@
+import React from 'react';
 
 export function filterProviders(mol, allowedProviders) {
   // find the relevant molecule sets (only those on the map)
@@ -87,3 +88,28 @@ export const PLOTLY_COLORS = [
   '#bcbd22',  // curry yellow-green
   '#17becf'   // blue-teal
 ];
+
+
+export function useFetchResource(apiBase) {
+    const inFlight = React.useRef(new Set());
+
+    return React.useCallback(async (resourceURL) => {
+        if (!resourceURL) return null;
+        const absolute = new URL(resourceURL, apiBase).toString();
+        if (inFlight.current.has(absolute)) return null; // de-dupe
+        inFlight.current.add(absolute);
+        try {
+            const resp = await fetch(absolute, {credentials: 'include'});
+            if (!resp.ok) {
+                console.error(`Error fetching resource: ${resp.status} ${resp.statusText}`);
+                return null;
+            }
+            return await resp.json();
+        } catch (e) {
+            console.error('Error fetching resource:', e);
+            return null;
+        } finally {
+            inFlight.current.delete(absolute);
+        }
+    }, [apiBase]);
+}

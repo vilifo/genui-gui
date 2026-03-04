@@ -3,7 +3,8 @@ import {
     MolsetActivitiesSummary,
     ModelCardNew,
     SimpleDropDownToggle,
-    convertEmbeddingsArgumentsObjectsToArrays
+    convertEmbeddingsArgumentsObjectsToArrays,
+    useFetchResource
 } from '../../../genui';
 import React from 'react';
 import {QSARExtraFields, QSARTrainingFields, QSARValidationStrategies} from './QSARModelFormFields';
@@ -27,28 +28,7 @@ function floatRange(start, end, step = 1.0) {
 
 export default function QSARModelCreateCard(props) {
     let molsets = [];
-    const fetchingList = [];
-
-    const fetchResource = async (resourceURL) => {
-        if (!resourceURL || fetchingList.includes(resourceURL)) {
-            return null;
-        }
-        fetchingList.push(resourceURL);
-        try {
-            const url = new URL(resourceURL, props.apiUrls.qsarRoot);
-            const response = await fetch(url.toString(), {
-                credentials: "include",
-            });
-            if (!response.ok) {
-                console.error(`Error fetching resource: ${response.status} ${response.statusText}`);
-                return null;
-            }
-            return await response.json();
-        } catch (error) {
-            console.error("Error fetching resource:", error);
-            return null;
-        }
-    }
+    const fetchResource = useFetchResource(props.apiUrls.qsarRoot);
 
     Object.keys(props.compoundSets).forEach(
         (key) => molsets = molsets.concat(props.compoundSets[key])
