@@ -35,7 +35,7 @@ const QSARModelCard = (props) => {
         value : trainingStrategy.activityThreshold && trainingStrategy.mode.name === 'classification'  ? trainingStrategy.activityThreshold : "--"
       },
       {
-        name : "Descriptor Sets",
+        name : "Embeddings",
         value : trainingStrategy.embeddings.map((desc) => `${desc.name}`).join(";")
       }
     ];

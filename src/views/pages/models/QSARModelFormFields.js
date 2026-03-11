@@ -86,13 +86,13 @@ export function QSARTrainingFields(props) {
                 ) : null
             }
             <FormGroup>
-                <Label htmlFor={`${trainingStrategyPrefix}.embeddings`}>Descriptor Sets</Label>
+                <Label htmlFor={`${trainingStrategyPrefix}.embeddings`}>Embeddings</Label>
                 <p>
-                    Choose one or more descriptor sets to use in the calculations.
+                    Choose one or more embeddings to use in the calculations.
                 </p>
                 <EmbeddingsField
                     {...props}
-                    description="Choose one or more descriptor sets to use in the calculations."
+                    description="Choose one or more embeddings to use in the calculations."
                     trainingStrategyPrefix={trainingStrategyPrefix}
                     formikProps={formikProps}
                 />
@@ -100,11 +100,11 @@ export function QSARTrainingFields(props) {
             {parameters.length > 0 ? <h4>{props.chosenAlgorithm.name} Parameters</h4> : null}
             <FormGroup>
                 <p>
-                    Choose one or more algorithms to use in model.
+                    Choose an algorithm to use in model.
                 </p>
                 <AlgorithmsField
                     {...props}
-                    description="Choose one or more descriptor sets to use in the calculations."
+                    description="Choose one or more embeddings to use in the calculations."
                     trainingStrategyPrefix={trainingStrategyPrefix}
                     formikProps={formikProps}
                 />

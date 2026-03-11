@@ -19,7 +19,7 @@ export default function MapCreateCard(props) {
 
     const trainingStrategySchema = {
         activityThreshold: Yup.number().min(0, 'Activity threshold must be zero or positive.'),
-        embeddings: Yup.array().of(Yup.object().shape({name:Yup.string(), arguments:Yup.mixed().nullable()})).required('You need to supply one or more descriptor sets for training.'),
+        embeddings: Yup.array().of(Yup.object().shape({name:Yup.string(), arguments:Yup.mixed().nullable()})).required('You need to supply one or more embeddings for training.'),
     };
 
     const extraParamsSchema = {

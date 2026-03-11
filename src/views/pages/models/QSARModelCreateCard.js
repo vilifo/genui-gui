@@ -65,7 +65,7 @@ export default function QSARModelCreateCard(props) {
         embeddings: Yup.array().of(Yup.object().shape({
             name: Yup.string(),
             arguments: Yup.object()
-        })).required('You need to supply one or more descriptor sets for training.'),
+        })).required('You need to supply one or more embeddings for training.'),
         parameters: Yup.object().shape({
             alg: Yup.string().required('You need to select an algorithm.'),
             parameters: Yup.object()
@@ -223,7 +223,7 @@ export default function QSARModelCreateCard(props) {
                                     newSearchSpace.push({
                                         name: key,
                                         type: "categorical",
-                                        choices: value[1]
+                                        value: value[1]
                                     });
                                 } else {
                                     newSearchSpace.push({

@@ -11,7 +11,7 @@ export default function MapCard(props) {
       value : model.molsets.map(molset => `${molset.name}`).join(";")
     },
     {
-      name : "Descriptor Sets",
+      name : "Embeddings",
       value : trainingStrategy.embeddings.map((desc) => `${desc.name}`).join(";")
     }
   ];

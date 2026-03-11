@@ -31,9 +31,11 @@ const ModelCardNewDefault = (props) => {
 
     const fetchAlgorithms = React.useCallback(async () => {
         for (const mode of Object.keys(allAlgorithms)) {
-            const data = await fetchResource(`models/qsprpred/sklearn/mode/${mode}/`);
-            if (!data) return
-            setAllAlgorithms({...allAlgorithms, [mode]: data});
+            if (allAlgorithms[mode].length === 0) {
+                const data = await fetchResource(`models/qsprpred/sklearn/mode/${mode}/`);
+                if (!data) return
+                setAllAlgorithms({...allAlgorithms, [mode]: data});
+            }
         }
     }, [fetchResource, allAlgorithms, setAllAlgorithms]);
 
@@ -41,7 +43,7 @@ const ModelCardNewDefault = (props) => {
         if (allEmbeddings.length === 0) {
             fetchEmbeddings();
         }
-        if (Object.keys(allAlgorithms).length === 0) {
+        if (Object.values(allAlgorithms).some(algorithms => algorithms.length === 0)) {
             fetchAlgorithms();
         }
     }, [fetchEmbeddings, allEmbeddings, fetchAlgorithms, allAlgorithms]);

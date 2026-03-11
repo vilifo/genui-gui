@@ -28,14 +28,6 @@ export default function QSARModelCreateFromFileCard(props) {
             enableFileUploads={true}
             extraParamsInit={extraParamsInit}
             extraParamsSchema={extraParamsSchema}
-            // trainingStrategyInit={trainingStrategyInit}
-            // trainingStrategySchema={trainingStrategySchema}
-            // trainingStrategyFields={(props) => (
-            //   <EmbeddingsField
-            //     {...props}
-            //     description="Check the descriptor sets that were used to train this model."
-            //   />
-            // )}
             extraFields={PredictionsFields}
             onValuesInit={(values, state) => {
                 if (state.modes) {

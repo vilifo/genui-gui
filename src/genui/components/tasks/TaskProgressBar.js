@@ -55,8 +55,8 @@ class TaskProgressBar extends React.Component {
         {
           progress.map(data => (
             <React.Fragment key={data.task.task_id}>
-              <div className="text-center">{data.task.task_name} ({data.progress.percent}%)</div>
-              <Progress value={data.progress.percent} />
+              <div className="text-center">{data.task.task_name} ({data.progress?.percent ?? 0}%)</div>
+              <Progress value={data.progress?.percent ?? 0} />
             </React.Fragment>
           ))
         }

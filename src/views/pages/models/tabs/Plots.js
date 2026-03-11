@@ -116,8 +116,8 @@ export function MetricCurvePlot(props) {
                 lineTension: 0,
                 fill: false,
                 data: curve.independent.map((independent, index) => ({
-                    x: independent,
-                    y: curve.dependent[index]
+                    x: curve.dependent[index],
+                    y: independent
                 })),
                 pointRadius: 0,
                 backgroundColor: color,
