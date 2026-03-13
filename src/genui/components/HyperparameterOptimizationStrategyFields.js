@@ -617,10 +617,10 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
                         {metrics && (
                             <React.Fragment>
                                 <FormGroup row>
-                                    <Label htmlFor={`${hyperparamStrategyPrefix}.metrics`} sm={4}>Validation
-                                        Metrics</Label>
+                                    <Label htmlFor={`${hyperparamStrategyPrefix}.metric`} sm={4}>Validation
+                                        Metric</Label>
                                     <Col sm={8}>
-                                        <Field name={`${hyperparamStrategyPrefix}.metrics`} as={Input} type="select">
+                                        <Field name={`${hyperparamStrategyPrefix}.metric`} as={Input} type="select">
                                             {metrics.map(metric => (
                                                 <option key={metric} value={metric}>
                                                     {metric}
@@ -629,7 +629,7 @@ export function QSARHyperparameterOptimizationStrategyFields(props) {
                                         </Field>
                                     </Col>
                                 </FormGroup>
-                                <FieldErrorMessage name={`${hyperparamStrategyPrefix}.metrics`}/>
+                                <FieldErrorMessage name={`${hyperparamStrategyPrefix}.metric`}/>
                             </React.Fragment>
                         )}
 

@@ -1,7 +1,7 @@
 import {PLOTLY_COLORS} from "../../../../genui";
 import 'chart.js/auto';
 import {Chart} from 'react-chartjs-2';
-import React from "react";
+import React from "react"
 
 export function MetricCurvePlot(props) {
     if (props.curves.length === 0) {

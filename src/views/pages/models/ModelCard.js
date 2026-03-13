@@ -36,9 +36,41 @@ const QSARModelCard = (props) => {
       },
       {
         name : "Embeddings",
-        value : trainingStrategy.embeddings.map((desc) => `${desc.name}`).join(";")
-      }
+          value: trainingStrategy.embeddings.map((desc) => {
+              const args = desc.arguments
+                  ? Object.entries(desc.arguments).map(([key, val]) => `${key}=${val}`).join(", ")
+                  : "";
+              return args ? `${desc.name}(${args})` : `${desc.name}()`;
+          }).join("; ")
+      },
     ];
+    const hyperParamOptParams = [];
+    const hyperParamOptStrategies = trainingStrategy.hyperParamOptStrategies;
+    if (hyperParamOptStrategies && hyperParamOptStrategies.length > 0) {
+        const strategy = hyperParamOptStrategies[0];
+        hyperParamOptParams.push({
+            name: `Algorithm`,
+            value: strategy.resourcetype
+        });
+        hyperParamOptParams.push({
+            name: `Metric`,
+            value: strategy.metric
+        });
+        hyperParamOptParams.push({
+            name: `Score aggregator`,
+            value: strategy.scoreAggregation
+        });
+        if (strategy.nTrials){
+            hyperParamOptParams.push({
+                name: `Number of Trials`,
+                value: strategy.nTrials
+            });
+        }
+        hyperParamOptParams.push({
+            name: `Search Space`,
+            value: strategy.searchSpace.map((param) => `${param.name}=[${param.value}]`).join(", ")
+        });
+    }
     if (trainingStrategy.modelledActivityType) {
       trainingParams.push({
         name : "Modelled Activity Type",
@@ -70,6 +102,7 @@ const QSARModelCard = (props) => {
           <ModelInfoTab
             {...props}
             extraTrainingParams={trainingParams}
+            hyperParamOptParams={hyperParamOptParams}
             extraValidationParams={validationParams}
             modelData={modelData}
           />

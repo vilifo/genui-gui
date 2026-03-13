@@ -1,22 +1,12 @@
 import { groupBy, GroupedViolinPlot } from '../../../../genui';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-class ActivitySummaryPlotter extends React.Component {
-
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      traces: this.initTraces(),
-      revision: 0
-    }
-  }
-
-  initTraces = () => {
-    const molsets = this.props.molsets;
-    const actsets = this.props.activitySets;
-    const activities = this.props.activities;
-    const mols = this.props.mols;
+const ActivitySummaryPlotter = (props) => {
+  const initTraces = () => {
+    const molsets = props.molsets;
+    const actsets = props.activitySets;
+    const activities = props.activities;
+    const mols = props.mols;
 
     const plotTraces = {};
     const bySource = groupBy(activities, 'source');
@@ -39,7 +29,7 @@ class ActivitySummaryPlotter extends React.Component {
         plotTraces[molset.id].y = [];
         plotTraces[molset.id].customdata = [];
         plotTraces[molset.id].marker = {
-          color: this.props.molsetsToColor[molset.id],
+          color: props.molsetsToColor[molset.id],
         }
       }
 
@@ -54,32 +44,29 @@ class ActivitySummaryPlotter extends React.Component {
     return plotTraces;
   };
 
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    if (prevProps.selectedMolsRevision !== this.props.selectedMolsRevision) {
-      this.setState(prevState => ({
-        traces: this.initTraces(),
-        revision: prevState.revision + 1
-      }))
-    }
-  }
+  const [traces, setTraces] = useState(initTraces());
+  const [revision, setRevision] = useState(0);
 
-  render() {
-    return (
-      <GroupedViolinPlot
-        title={`Distributions of ${this.props.type.value}`}
-        traces={this.state.traces}
-        tracesRev={this.state.revision}
-        onHover={(eventData) => eventData ? this.props.onMolHover(eventData.points[0].customdata) : null}
-        onSelect={(eventData) => {
-          if (eventData) {
-            this.props.onMolsSelect(eventData.points.map(point => point.customdata));
-          }
+  useEffect(() => {
+    setTraces(initTraces());
+    setRevision(prev => prev + 1);
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.selectedMolsRevision]);
+
+  return (
+    <GroupedViolinPlot
+      title={`Distributions of ${props.type.value}`}
+      traces={traces}
+      tracesRev={revision}
+      onHover={(eventData) => eventData ? props.onMolHover(eventData.points[0].customdata) : null}
+      onSelect={(eventData) => {
+        if (eventData) {
+          props.onMolsSelect(eventData.points.map(point => point.customdata));
         }
-        }
-        onDeselect={this.props.onMolsDeselect}
-      />
-    )
-  }
-}
+      }}
+      onDeselect={props.onMolsDeselect}
+    />
+  );
+};
 
 export default ActivitySummaryPlotter;

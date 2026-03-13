@@ -71,36 +71,31 @@ function ExtraFormFields(props) {
   )
 }
 
-class ChEMBLCardNew extends React.Component {
+function ChEMBLCardNew(props) {
+  const extraInitVals = {
+    targets : [],
+    maxPerTarget : ''
+  };
 
-  render() {
-    const extraInitVals = {
-      targets : [],
-      maxPerTarget : ''
-    };
+  const extraValidSchemas = {
+    targets: Yup.array().of(Yup.string().required("Empty target not allowed")).required("Must provide at least one target."),
+    maxPerTarget: Yup.number().min(1, 'Number of compounds must be empty or set to more than 0.')
+  };
 
-    const extraValidSchemas = {
-      targets: Yup.array().of(Yup.string().required("Empty target not allowed")).required("Must provide at least one target."),
-      maxPerTarget: Yup.number().min(1, 'Number of compounds must be empty or set to more than 0.')
-    };
-
-    return (
-      <GenericNewMolSetCard
-        {...this.props}
-        cardHeader="Download Compounds from ChEMBL"
-        extraFormInitVals={extraInitVals}
-        extraFormValidSchemas={extraValidSchemas}
-        additionalFieldsComponent={ExtraFormFields}
-        prePOST={data => {
-            if (!data.maxPerTarget) {
-                delete data.maxPerTarget;
-            }
-            return data;
-        }}
-      />
-    )
-  }
-
+  return (
+    <GenericNewMolSetCard
+      {...props}
+      cardHeader="Download Compounds from ChEMBL"
+      extraFormInitVals={extraInitVals}
+      extraFormValidSchemas={extraValidSchemas}
+      additionalFieldsComponent={ExtraFormFields}
+      prePOST={data => {
+          if (!data.maxPerTarget) {
+              delete data.maxPerTarget;
+          }
+          return data;
+      }}
+    />
+  );
 }
-
 export default ChEMBLCardNew;

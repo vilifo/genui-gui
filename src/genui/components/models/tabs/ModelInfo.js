@@ -95,7 +95,7 @@ function ModelInfo({
         },
         {
             name: "Parameters",
-            value: trainingStrategy.parameters.map((param) => `${param.parameter.name}=${param.value}`).join(";")
+            value: trainingStrategy.parameters.map((param) => `${param.parameter.name}=${param.value}`).join("; ")
         },
         {
             name: "Mode",
@@ -107,7 +107,11 @@ function ModelInfo({
     const validationParams = (validationStrategies ? validationStrategies.map((validationStrategy) => [
         {
             name: "Data Split",
-            value: validationStrategy.dataSplit
+            value: `${validationStrategy.dataSplit.name}{ ${
+                Object.entries(validationStrategy.dataSplit).filter(
+                    ([key]) => key !== 'name').map(
+                        (param) => 
+                            `${param[0]}=${typeof param[1] === 'object' && param[1] !== null ? param[1].name : param[1]}`).join("; ")}}`
         },
         {
             name: "Cross Validation Folds",
@@ -115,7 +119,7 @@ function ModelInfo({
         },
         {
             name: "Metrics",
-            value: validationStrategy.metrics.map((metric) => `${metric}`).join(";")
+            value: validationStrategy.metrics.map((metric) => `${metric}`).join("; ")
         }
     ]) : []).concat(extraValidationParams || []);
 
@@ -135,16 +139,16 @@ function ModelInfo({
                     <React.Fragment>
                         <h4>Model Data</h4>
                         <div style={{overflowX: "auto", maxWidth: "90%"}}>
-                        <Table size="sm">
-                            <TableHeaderFromItems
-                                items={["Item", "Value"]}
-                            />
-                            <TableDataFromItems
-                                items={modelData}
-                                dataProps={["value"]}
-                                rowHeaderProp="name"
-                            />
-                        </Table>
+                            <Table size="sm">
+                                <TableHeaderFromItems
+                                    items={["Item", "Value"]}
+                                />
+                                <TableDataFromItems
+                                    items={modelData}
+                                    dataProps={["value"]}
+                                    rowHeaderProp="name"
+                                />
+                            </Table>
                         </div>
                     </React.Fragment>
                 )}
@@ -163,43 +167,61 @@ function ModelInfo({
                     </Table>
                 </div>
 
-                <h4>Validation Settings</h4>
-                <div style={{overflowX: "auto", maxWidth: "90%"}}>
-                {validationParams.length > 0 ? (
-                    validationParams.map((validationParams, index) => (
-                        <React.Fragment key={index}>
-                            <h5>Validation Strategy {index + 1}</h5>
+                {props.hyperParamOptParams && props.hyperParamOptParams.length > 0 ? (
+                    <React.Fragment>
+                        <h4>Hyperparameter Optimization</h4>
+                        <div style={{overflowX: "auto", maxWidth: "90%"}}>
                             <Table size="sm">
                                 <TableHeaderFromItems
                                     items={["Parameter", "Value"]}
                                 />
                                 <TableDataFromItems
-                                    items={validationParams}
+                                    items={props.hyperParamOptParams}
                                     dataProps={["value"]}
                                     rowHeaderProp="name"
-                                    conversion={(item) => {
-                                        if (typeof item === "object" && item !== null) {
-                                            const formatNestedObject = (obj) => {
-                                                return Object.entries(obj)
-                                                    .map(([key, value]) => {
-                                                        if (typeof value === 'object' && value !== null) {
-                                                            return `${key}: {${formatNestedObject(value)}}`;
-                                                        }
-                                                        return `${key}: ${value}`;
-                                                    })
-                                                    .join('; ');
-                                            };
-                                            return formatNestedObject(item);
-                                        }
-                                        return item.toString();
-                                    }}
                                 />
                             </Table>
-                        </React.Fragment>
-                    ))
-                ) : (
-                    <p>No validation data available for this model.</p>
-                )}
+                        </div>
+                    </React.Fragment>
+                ) : null}
+
+                <h4>Validation Settings</h4>
+                <div style={{overflowX: "auto", maxWidth: "90%"}}>
+                    {validationParams.length > 0 ? (
+                        validationParams.map((validationParams, index) => (
+                            <React.Fragment key={index}>
+                                <h5>Validation Strategy {index + 1}</h5>
+                                <Table size="sm">
+                                    <TableHeaderFromItems
+                                        items={["Parameter", "Value"]}
+                                    />
+                                    <TableDataFromItems
+                                        items={validationParams}
+                                        dataProps={["value"]}
+                                        rowHeaderProp="name"
+                                        conversion={(item) => {
+                                            if (typeof item === "object" && item !== null) {
+                                                const formatNestedObject = (obj) => {
+                                                    return Object.entries(obj)
+                                                        .map(([key, value]) => {
+                                                            if (typeof value === 'object' && value !== null) {
+                                                                return `${key}: {${formatNestedObject(value)}}`;
+                                                            }
+                                                            return `${key}: ${value}`;
+                                                        })
+                                                        .join('; ');
+                                                };
+                                                return formatNestedObject(item);
+                                            }
+                                            return item.toString();
+                                        }}
+                                    />
+                                </Table>
+                            </React.Fragment>
+                        ))
+                    ) : (
+                        <p>No validation data available for this model.</p>
+                    )}
                 </div>
 
                 <ModelFiles
