@@ -35,7 +35,7 @@ function CompoundsPage(props) {
       />
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.definitions, props.handleAddMolSetList, props.setPageHeader]);
+  }, [props.handleAddMolSetList, props.setPageHeader]);
 
   const molsets = props.compoundSets;
   if (molsets === null) {
