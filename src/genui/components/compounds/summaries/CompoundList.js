@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Col, Row } from 'reactstrap';
 import {
   ActivitiesByTypeFlatView,
@@ -6,129 +6,136 @@ import {
   MoleculeMetadata,
   MoleculeImage,
   MoleculePropsProvider,
-  TabWidget, PropertiesTable,
+  TabWidget,
+  PropertiesTable,
 } from '../../..';
 import SimplePaginator from '../../SimplePaginator';
 
-class MoleculeData extends React.Component {
-  constructor(props) {
-    super(props);
+const MoleculeData = (props) => {
+  const {
+    showInfo = true,
+    showActivities = true,
+    showProperties = true,
+  } = props;
 
-    this.state = this.initState(props);
+  let showData = showInfo;
+  if (!showData && !showActivities) {
+    showData = true;
   }
 
-  initState = (props) => {
-    let showData = typeof(props.showInfo) === 'boolean' ? props.showInfo : true;
-    const showActivities = typeof(props.showActivities) === 'boolean' ? props.showActivities : true;
-    const showProperties = typeof(props.showProperties) === 'boolean' ? props.showProperties : true;
+  const tabs = useMemo(() => {
+    const newTabs = [];
 
-    if (!(showData || showActivities)) {
-      showData = true;
-    }
-
-    const tabs = [];
     if (showData) {
-      tabs.push({
+      newTabs.push({
         title: "Info",
-        renderedComponent: MoleculeMetadata
-      },)
+        renderedComponent: MoleculeMetadata,
+      });
     }
 
     if (showActivities) {
-      tabs.push({
+      newTabs.push({
         title: "Activities",
-        renderedComponent: (props) => (
-          <MoleculeActivityProvider
-            {...props}
-            component={ActivitiesByTypeFlatView}
-          />
-        )
-      })
+        renderedComponent: (tabProps) => (
+            <MoleculeActivityProvider
+                {...tabProps}
+                component={ActivitiesByTypeFlatView}
+            />
+        ),
+      });
     }
 
     if (showProperties) {
-      tabs.push({
+      newTabs.push({
         title: "Properties",
-        renderedComponent: (props) => (
-          <MoleculePropsProvider
-            {...props}
-            propsList={[
-              "AMW",
-              "NUMHEAVYATOMS",
-              "NUMAROMATICRINGS",
-              "HBA",
-              "HBD",
-              "LOGP",
-              "TPSA",
-            ]}
-            component={PropertiesTable}
-          />
-        )
-      })
+        renderedComponent: (tabProps) => (
+            <MoleculePropsProvider
+                {...tabProps}
+                propsList={[
+                  "AMW",
+                  "NUMHEAVYATOMS",
+                  "NUMAROMATICRINGS",
+                  "HBA",
+                  "HBD",
+                  "LOGP",
+                  "TPSA",
+                ]}
+                component={PropertiesTable}
+            />
+        ),
+      });
     }
 
-    return {
-      showData : showData,
-      showActivities: showActivities,
-      showProperties: showProperties,
-      tabs: tabs
+    return newTabs;
+  }, [showData, showActivities, showProperties]);
+
+  const activeTab = showActivities ? "Activities" : "Info";
+
+  return (
+      <TabWidget {...props} tabs={tabs} activeTab={activeTab} />
+  );
+};
+
+const MemoizedMoleculeData = React.memo(MoleculeData, (prevProps, nextProps) => {
+  if (nextProps.updateCondition) {
+    // Reconstruct the mock state object in case the parent's updateCondition expects it
+    const getMockState = (p) => {
+      let sData = p.showInfo !== undefined ? p.showInfo : true;
+      const sActs = p.showActivities !== undefined ? p.showActivities : true;
+      const sProps = p.showProperties !== undefined ? p.showProperties : true;
+      if (!sData && !sActs) sData = true;
+      return { showData: sData, showActivities: sActs, showProperties: sProps, tabs: [] };
     };
-  };
 
-  shouldComponentUpdate(nextProps, nextState, nextContext) {
-    if (this.props.updateCondition) {
-      return this.props.updateCondition(this.props, nextProps, this.state, nextState, nextContext);
-    } else {
-      return true;
-    }
+    const shouldUpdate = nextProps.updateCondition(
+        prevProps,
+        nextProps,
+        getMockState(prevProps),
+        getMockState(nextProps),
+        {}
+    );
+    return !shouldUpdate;
   }
-
-  render() {
-    return (
-      <TabWidget {...this.props} tabs={this.state.tabs} activeTab={this.state.showActivities ? "Activities" : "Info"}/>
-    )
-  }
-}
+  return false;
+});
 
 export function CompoundListItem(props) {
-  const mol = props.mol;
+  const { mol } = props;
   const sm_cols = [3, 9];
   const md_cols = [3, 9];
 
   return (
-    <Row>
-      <Col md={md_cols[0]} sm={sm_cols[0]}>
-        <MoleculeImage mol={mol}/>
-      </Col>
-      <Col md={md_cols[1]} sm={sm_cols[1]}>
-        <MoleculeData {...props}/>
-      </Col>
-    </Row>
-  )
+      <Row>
+        <Col md={md_cols[0]} sm={sm_cols[0]}>
+          <MoleculeImage mol={mol} />
+        </Col>
+        <Col md={md_cols[1]} sm={sm_cols[1]}>
+          <MemoizedMoleculeData {...props} />
+        </Col>
+      </Row>
+  );
 }
 
 export default function CompoundList(props) {
-  const mols = props.mols;
+  const { mols, paginate } = props;
 
-  if (props.paginate) {
+  if (paginate) {
     return (
         <SimplePaginator items={mols} itemsPerPage={10}>
-          {
-            currentPageItems => currentPageItems.map(item => (
-                <CompoundListItem {...props} key={item.id} mol={item}/>
-            ))
+          {(currentPageItems) =>
+              currentPageItems.map((item) => (
+                  <CompoundListItem {...props} key={item.id} mol={item} />
+              ))
           }
         </SimplePaginator>
-    )
-  } else {
-      return (
-        <React.Fragment>
-          {
-            mols.map(mol => (
-              <CompoundListItem {...props} key={mol.id} mol={mol}/>
-            ))
-          }
-        </React.Fragment>
-      )
+    );
   }
+
+  return (
+      <React.Fragment>
+        {mols.map((mol) => (
+            <CompoundListItem {...props} key={mol.id} mol={mol} />
+        ))}
+      </React.Fragment>
+  );
 }

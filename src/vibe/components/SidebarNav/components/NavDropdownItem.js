@@ -1,45 +1,41 @@
-import React, { Component } from 'react';
+import React, { useState } from 'react';
 import * as Feather from 'react-feather';
 import NavBadge from './NavBadge';
 import NavSingleItem from './NavSingleItem';
 
-export default class NavDropdownItem extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      open: true
-    };
-  }
-  toggle = e => {
-    this.setState(prevState => ({ open: !prevState.open }));
+const NavDropdownItem = ({ item, isSidebarCollapsed }) => {
+  const [open, setOpen] = useState(true);
+
+  const toggle = (e) => {
+    setOpen((prevOpen) => !prevOpen);
     e.preventDefault();
     e.stopPropagation();
   };
-  render() {
-    const { item } = this.props;
-    const isExpanded = this.state.open ? 'open' : '';
-    const Icon = item.icon ? Feather[item.icon] : null;
-    const ExpandIcon = this.state.open
-      ? Feather.ChevronDown
-      : Feather.ChevronRight;
-    return (
+
+  const isExpanded = open ? 'open' : '';
+  const Icon = item.icon ? Feather[item.icon] : null;
+  const ExpandIcon = open ? Feather.ChevronDown : Feather.ChevronRight;
+
+  return (
       <li className={`nav-item has-submenu ${isExpanded}`}>
-        <a href="#!" role="button" onClick={this.toggle}>
+        <a href="#!" role="button" onClick={toggle}>
           {item.icon && Icon && <Icon className="side-nav-icon" />}
           <span className="nav-item-label">{item.name}</span>{' '}
           {item.badge && (
-            <NavBadge color={item.badge.variant} text={item.badge.text} />
+              <NavBadge color={item.badge.variant} text={item.badge.text} />
           )}
           <ExpandIcon className="menu-expand-icon" />
         </a>
-        {(this.state.open || this.props.isSidebarCollapsed) && (
-          <ul className="nav-submenu">
-            {item.children.map((item, index) => (
-              <NavSingleItem item={item} key={index} />
-            ))}
-          </ul>
+        {(open || isSidebarCollapsed) && (
+            <ul className="nav-submenu">
+              {/* Renamed the map parameter from 'item' to 'childItem' to avoid shadowing the prop */}
+              {item.children.map((childItem, index) => (
+                  <NavSingleItem item={childItem} key={index} />
+              ))}
+            </ul>
         )}
       </li>
-    );
-  }
-}
+  );
+};
+
+export default NavDropdownItem;

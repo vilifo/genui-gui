@@ -1,68 +1,83 @@
-import React from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Progress } from 'reactstrap';
 
-class TaskProgressBar extends React.Component {
-  constructor(props) {
-    super(props);
+const TaskProgressBar = ({ tasks, progressURL }) => {
+  const [progressData, setProgressData] = useState([]);
 
-    this.progressURL =this.props.progressURL;
+  const isMounted = useRef(true);
+  const abortControllers = useRef(new Set());
 
-    this.state = {
-      progressData : []
-    }
-  }
+  const updateProgress = useCallback(async () => {
+    if (!tasks || tasks.length === 0) return;
 
-  componentDidMount() {
-    this.updateProgress();
-    this.interval = setInterval(this.updateProgress, 2000);
-  }
+    const controller = new AbortController();
+    abortControllers.current.add(controller);
 
-  componentWillUnmount() {
-    clearInterval(this.interval);
-  }
+    try {
+      const fetchPromises = tasks.map((task) => {
+        const url = new URL(`${task.task_id}/`, progressURL);
 
-  updateProgress = () => {
-    const progressData = [];
-    this.props.tasks.forEach(task => {
-      const url = new URL(task.task_id + '/', this.progressURL);
-      fetch(url, {credentials: "include",})
-        .then(response => response.json())
-        .then(data => {
-          data.task = task;
-          progressData.push(data);
-
-          // FIXME: this set state should not happen if the component is unmounted -> the fetch needs to be cancelled properly
-          this.setState(state => {
-            return {
-              progressData : progressData
-            };
-          });
+        return fetch(url, {
+          credentials: "include",
+          signal: controller.signal
         })
-      ;
-    });
-  };
+            .then((response) => response.json())
+            .then((data) => ({
+              ...data,
+              task: task,
+            }))
+            .catch((e) => {
+              if (e.name !== 'AbortError') console.error(e);
+              return null;
+            });
+      });
 
-  render() {
-    const tasks = this.props.tasks;
-    if (tasks.length === 0) {
-      return null;
+      const results = await Promise.all(fetchPromises);
+
+      if (isMounted.current) {
+        const validResults = results.filter(Boolean);
+        setProgressData(validResults);
+      }
+    } finally {
+      abortControllers.current.delete(controller);
     }
+  }, [tasks, progressURL]);
 
-    const progress = this.state.progressData;
-    progress.sort((a, b) => (a.task.task_id > b.task.task_id) ? 1 : -1);
-    return (
+  useEffect(() => {
+    isMounted.current = true;
+    const currentControllers = abortControllers.current;
+
+    updateProgress();
+
+    const intervalId = setInterval(updateProgress, 2000);
+
+    return () => {
+      isMounted.current = false;
+      clearInterval(intervalId);
+      currentControllers.forEach((controller) => controller.abort());
+    };
+  }, [updateProgress]);
+
+  if (!tasks || tasks.length === 0) {
+    return null;
+  }
+
+  const sortedProgress = [...progressData].sort((a, b) =>
+      a.task.task_id > b.task.task_id ? 1 : -1
+  );
+
+  return (
       <React.Fragment>
-        {
-          progress.map(data => (
+        {sortedProgress.map((data) => (
             <React.Fragment key={data.task.task_id}>
-              <div className="text-center">{data.task.task_name} ({data.progress?.percent ?? 0}%)</div>
+              <div className="text-center">
+                {data.task.task_name} ({data.progress?.percent ?? 0}%)
+              </div>
               <Progress value={data.progress?.percent ?? 0} />
             </React.Fragment>
-          ))
-        }
+        ))}
       </React.Fragment>
-    )
-  }
-}
+  );
+};
 
 export default TaskProgressBar;

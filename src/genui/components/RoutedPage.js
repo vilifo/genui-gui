@@ -1,89 +1,90 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import PageAlertContext from '../../vibe/components/PageAlert/PageAlertContext';
-import '../styles.css'
+import '../styles.css';
 
-/*
- * Component which serves the purpose of a "root route component".
- * 
- * Source: https://stackoverflow.com/a/54112771
- */
-class RoutedPage extends React.Component {
+const sleep = (milliseconds) => {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+};
 
-  constructor(props) {
-    super(props);
-    this.state = {
-      notFound : false
-    };
-  }
+const RoutedPage = (props) => {
+  const {
+    component: ComponentToRender,
+    setPageHeader,
+    setPageTitle,
+    title,
+    setPageHeaderTitle,
+    currentProject,
+  } = props;
 
-  sleep = (milliseconds) => {
-    return new Promise(resolve => setTimeout(resolve, milliseconds))
-  };
+  const [notFound, setNotFound] = useState(false);
+  const { setAlert } = useContext(PageAlertContext);
 
-  handleResponseErrors = (
-    response,
-    message='Failed to fetch data from backend.',
-    showAlert=false,
-    callback=null
+  const navigate = useNavigate();
+  const params = useParams();
+  const location = useLocation();
+
+  const projectName = currentProject && title !== 'Projects' ? ` (${currentProject.name})` : '';
+
+  useEffect(() => {
+    setPageTitle(title + projectName);
+    setPageHeaderTitle(title + projectName);
+    setPageHeader(null);
+  }, [title, setPageHeader, setPageTitle, setPageHeaderTitle, projectName]);
+
+  const showAlert = useCallback((message, severity = 'danger') => {
+    if (setAlert) {
+      setAlert(message, severity);
+    }
+  }, [setAlert]);
+
+  const handleResponseErrors = useCallback((
+      response,
+      message = 'Failed to fetch data from backend.',
+      shouldShowAlert = false,
+      callback = null
   ) => {
     if (!response.ok) {
-      if (showAlert) {
-        this.showAlert(message);
+      if (shouldShowAlert) {
+        showAlert(message);
       }
       response.json()
-        .then(data => {
-          if (callback) {
-            callback(data);
-          }
-        })
-        .catch(e => console.log(e));
+          .then(data => {
+            if (callback) {
+              callback(data);
+            }
+          })
+          .catch(e => console.log(e));
       throw new Error(message);
     } else {
       return response.json();
     }
-  };
+  }, [showAlert]);
 
-  showAlert = (message, severity='danger') => {
-    this.context.setAlert(message, severity);
-  };
-
-  retryAction = (action, message='', severity='danger', interval=5000) => {
+  const retryAction = useCallback((action, message = '', severity = 'danger', interval = 5000) => {
     if (message) {
-      this.showAlert(message + ` (retrying in ${interval / 1000} seconds)`, severity);
+      showAlert(`${message} (retrying in ${interval / 1000} seconds)`, severity);
     }
-    console.log(message + ` Retrying in ${interval / 1000} seconds...`);
-    this.sleep(interval)
-      .then(action)
-    ;
-  };
+    console.log(`${message} Retrying in ${interval / 1000} seconds...`);
 
-  /**
-   * Here, we use a component prop to render
-   * a component, as specified in route configuration
-   */
-  render() {
-    if (this.state.notFound) {
-      return <Navigate to='/404' />
-    }
+    sleep(interval).then(action);
+  }, [showAlert]);
 
-    return <this.props.component {...this.props} retryAction={this.retryAction} handleResponseErrors={this.handleResponseErrors} setNotFound={(status) => this.setState({notFound: status})} />
+  if (notFound) {
+    return <Navigate to="/404" replace />;
   }
-}
-RoutedPage.contextType = PageAlertContext;
 
-// wrap the component to take advantage of hooks
-const Export = (props) => {
-  const setPageHeader = props.setPageHeader;
-  const setTitle = props.setPageTitle;
-  const title = props.title;
-  const setPageHeaderTitle = props.setPageHeaderTitle;
-  const projectName = props.currentProject && props.title !== 'Projects' ? ' (' + props.currentProject.name + ')' : '' ;
-  useEffect(() => {
-    setTitle(title + projectName);
-    setPageHeaderTitle(title + projectName);
-    setPageHeader(null);
-  }, [title, setPageHeader, setTitle, setPageHeaderTitle, projectName]);
-  return (<RoutedPage {...props} router={{params: useParams(), navigate: useNavigate(), location: useLocation()}}/>);
-}
-export default Export;
+  const routerProps = { params, navigate, location };
+
+  return (
+      <ComponentToRender
+          {...props}
+          router={routerProps}
+          retryAction={retryAction}
+          handleResponseErrors={handleResponseErrors}
+          setNotFound={setNotFound}
+      />
+  );
+};
+
+export default RoutedPage;

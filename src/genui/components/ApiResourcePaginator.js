@@ -1,79 +1,94 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Pagination from 'react-js-pagination';
 
-function ApiResourcePaginator(props) {
+const ApiResourcePaginator = (props) => {
+  const { updateCondition, children } = props;
+
   const [activePage, setActivePage] = useState(1);
   const [activePageItems, setActivePageItems] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
 
-  const abortControllerRef = useRef(new AbortController());
-  const isMountedRef = useRef(true);
+  const isMounted = useRef(true);
+  const abortControllerRef = useRef(null);
+
+  const prevPropsRef = useRef(props);
+  const prevStateRef = useRef({ activePage: 1, activePageItems: [], totalCount: 0 });
+  const isFirstRender = useRef(true);
 
   const fetchPage = useCallback((rootUrl, pageNumber) => {
-    const url = `${rootUrl.toString()}?page=${pageNumber}`;
-    fetch(url, {signal: abortControllerRef.current.signal, credentials: "include"})
-      .then(response => response.json())
-      .then(data => {
-        if (isMountedRef.current) {
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const fetchUrl = `${rootUrl.toString()}?page=${pageNumber}`;
+
+    fetch(fetchUrl, {
+      signal: controller.signal,
+      credentials: "include",
+    })
+        .then((response) => response.json())
+        .then((data) => {
+          if (!isMounted.current) return;
+
           setActivePageItems(data.results);
           setTotalCount(data.count);
           setActivePage(pageNumber);
-        }
-      })
-      .catch(e => console.log(e));
+        })
+        .catch((e) => {
+          if (e.name !== 'AbortError') {
+            console.log(e);
+          }
+        });
   }, []);
+
+  useEffect(() => {
+    isMounted.current = true;
+    fetchPage(props.url, 1);
+
+    return () => {
+      isMounted.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const currentState = { activePage, activePageItems, totalCount };
+
+    if (
+        updateCondition &&
+        updateCondition(prevPropsRef.current, props, prevStateRef.current, currentState)
+    ) {
+      fetchPage(props.url, activePage);
+    }
+
+    prevPropsRef.current = props;
+    prevStateRef.current = currentState;
+  }, [props, activePage, activePageItems, totalCount, updateCondition, fetchPage]);
 
   const handlePageChange = (pageNumber) => {
     fetchPage(props.url, pageNumber);
   };
 
-  // Equivalent to componentDidMount
-  useEffect(() => {
-    fetchPage(props.url, activePage);
-
-    // Save a reference to the current abort controller
-    const currentAbortController = abortControllerRef.current;
-
-    // Equivalent to componentWillUnmount
-    return () => {
-      isMountedRef.current = false;
-      currentAbortController.abort();
-    };
-  }, [fetchPage, props.url, activePage]);
-
-  // Equivalent to componentDidUpdate for props changes
-  const prevPropsRef = useRef(props);
-  const prevStateRef = useRef({ activePage, activePageItems, totalCount });
-
-  useEffect(() => {
-    if (props.updateCondition) {
-      const prevProps = prevPropsRef.current;
-      const prevState = prevStateRef.current;
-
-      if (props.updateCondition(prevProps, props, prevState, { activePage, activePageItems, totalCount })) {
-        fetchPage(props.url, activePage);
-      }
-
-      // Update refs for next comparison
-      prevPropsRef.current = props;
-      prevStateRef.current = { activePage, activePageItems, totalCount };
-    }
-  }, [props, props.updateCondition, props.url, activePage, fetchPage, activePageItems, totalCount]);
-
   return (
-    <React.Fragment>
-      <Pagination
-        activePage={activePage}
-        // itemsCountPerPage={props.itemsPerPage ? props.itemsPerPage : 10}
-        totalItemsCount={totalCount}
-        pageRangeDisplayed={5}
-        onChange={handlePageChange}
-        itemClass="page-item"
-        linkClass="page-link"
-      />
-      {props.children(activePageItems)}
-    </React.Fragment>
+      <React.Fragment>
+        <Pagination
+            activePage={activePage}
+            totalItemsCount={totalCount}
+            pageRangeDisplayed={5}
+            onChange={handlePageChange}
+            itemClass="page-item"
+            linkClass="page-link"
+        />
+        {children(activePageItems)}
+      </React.Fragment>
   );
-}
+};
 
 export default ApiResourcePaginator;

@@ -54,6 +54,7 @@ export function ActivitiesTable(props) {
             })
           };
           return (
+              activity.value ? (
             <tr key={activity.id}>
               {
                 !appendComponents ? drawExtraComponents() : null
@@ -70,7 +71,7 @@ export function ActivitiesTable(props) {
               {
                 appendData ? extraData.map(data => <td key={data.header}>{data.data[index]}</td>) : null
               }
-            </tr>
+            </tr>) : null
           )
         })
       }
